@@ -1,0 +1,322 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 1. جدول المستخدمين
+// ============================================
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  passwordHash          String    @map("password_hash")
+  fullName              String    @map("full_name")
+  nationalId            String?   @map("national_id")
+  phone                 String?
+  governorate           String?
+    profileImageUrl   String?   @map("profile_image_url")
+
+  role                  String    @default("user")
+  kycStatus             String    @default("none") @map("kyc_status")
+  trustLevel            String    @default("new_trader") @map("trust_level")
+  
+  totalTrades           Int       @default(0) @map("total_trades")
+  successRate           Decimal   @default(0) @map("success_rate") @db.Decimal(5,2)
+  averageRating         Decimal   @default(0) @map("average_rating") @db.Decimal(3,2)
+  
+  trc20Wallet           String?   @map("trc20_wallet")
+  bscWallet             String?   @map("bsc_wallet")
+  
+  isSuspended           Boolean   @default(false) @map("is_suspended")
+  suspensionReason      String?   @map("suspension_reason")
+  suspendedUntil        DateTime? @map("suspended_until")
+  
+  consecutiveLateCount  Int       @default(0) @map("consecutive_late_count")
+  fraudulentDisputeCount Int      @default(0) @map("fraudulent_dispute_count")
+  
+  isTwoFactorEnabled    Boolean   @default(false) @map("is_two_factor_enabled")
+  twoFactorSecret       String?   @map("two_factor_secret")
+      backupCodes          Json?     @default("[]") @map("backup_codes")
+
+
+  emailVerified         Boolean   @default(true) @map("email_verified")
+    emailVerificationToken String?  @map("email_verification_token")
+  emailVerificationExpires DateTime? @map("email_verification_expires")
+
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  lastLoginAt           DateTime? @map("last_login_at")
+  lastLoginIp           String?   @map("last_login_ip")
+  
+  refreshTokens         RefreshToken[]
+  kycRequests           KycRequest[]
+  bankAccounts          BankAccount[]
+  offers                Offer[]
+  tradesAsSeller        Trade[]   @relation("sellerTrades")
+  tradesAsBuyer         Trade[]   @relation("buyerTrades")
+  paymentProofs         PaymentProof[]
+  reviewsGiven          Review[]  @relation("reviewer")
+  reviewsReceived       Review[]  @relation("reviewee")
+  disputesOpened        Dispute[] @relation("openedBy")
+  disputesResolved      Dispute[] @relation("resolvedBy")
+  notifications         Notification[]
+  auditLogs             AuditLog[] @relation("userAuditLogs")
+  passwordResetTokens   PasswordResetToken[]
+  workHoursStart   String?   @map("work_hours_start")   // مثال: "09:00"
+  workHoursEnd     String?   @map("work_hours_end")     // مثال: "21:00"
+  workDays         Json?     @default("[]") @map("work_days") // أيام العمل [0-6] (0=الأحد)
+  isActiveNow      Boolean   @default(false) @map("is_active_now") // هل المستخدم نشط حالياً؟
+  lastSeenAt       DateTime? @map("last_seen_at")       // آخر ظهور
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime @map("expires_at")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  @@map("refresh_tokens")
+}
+
+model KycRequest {
+   id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName        String   @map("full_name")
+  nationalId      String   @map("national_id")
+  phone           String   @map("phone")
+  bankName        String   @map("bank_name")
+  idFrontImage    String   @map("id_front_image")
+  status          String   @default("pending")
+  rejectionReason String?  @map("rejection_reason")
+  reviewedBy      String?  @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  bankAccount     BankAccount?
+  
+  @@map("kyc_requests")
+}
+
+model BankAccount {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "bank_accounts_user_fkey")
+  bankName          String   @map("bank_name")
+  accountNumber     String   @map("account_number")
+  accountHolderName String   @map("account_holder_name")
+  proofImageUrl     String?  @map("proof_image_url")
+  verifiedAt        DateTime? @map("verified_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  kycRequest        KycRequest? @relation(fields: [userId], references: [userId], map: "bank_accounts_kyc_fkey")
+  
+  @@map("bank_accounts")
+}
+
+model Offer {
+  id                 String   @id @default(uuid())
+  sellerId           String   @map("seller_id")
+  seller             User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  fiatCurrency       String   @map("fiat_currency")
+  minAmount          Decimal  @map("min_amount") @db.Decimal(20,2)
+  maxAmount          Decimal  @map("max_amount") @db.Decimal(20,2)
+  network            String
+  paymentInstructions String  @map("payment_instructions")
+    bankName           String?  @map("bank_name")  // ✅ أضف هذا الحقل
+
+  status             String   @default("active")
+    premiumPercent     Float    @default(0) @map("premium_percent")  // ✅ أضف هذا السطر
+  escrowBalance      Decimal  @default(0) @map("escrow_balance") @db.Decimal(20,2)
+  reservedBalance    Decimal  @default(0) @map("reserved_balance") @db.Decimal(20,2)
+  depositAddress     String?  @map("deposit_address")
+  depositTxHash      String?  @map("deposit_tx_hash")
+  expiresAt          DateTime? @map("expires_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  
+  trades             Trade[]
+  
+  @@map("offers")
+}
+
+model Trade {
+  id                  String   @id @default(uuid())
+  tradeReference      String   @unique @map("trade_reference")
+  sellerId            String   @map("seller_id")
+  seller              User     @relation("sellerTrades", fields: [sellerId], references: [id])
+  buyerId             String   @map("buyer_id")
+  buyer               User     @relation("buyerTrades", fields: [buyerId], references: [id])
+  offerId             String   @map("offer_id")
+  offer               Offer    @relation(fields: [offerId], references: [id])
+  amountUsdt          Decimal  @map("amount_usdt") @db.Decimal(20,2)
+  pricePerUsdt        Decimal  @map("price_per_usdt") @db.Decimal(10,4)
+  totalFiat           Decimal  @map("total_fiat") @db.Decimal(20,2)
+  fiatCurrency        String   @map("fiat_currency")
+  network             String
+  status              String   @default("waiting_seller_deposit")
+  escrowAddress       String?  @map("escrow_address")
+  escrowBalance       Decimal  @default(0) @map("escrow_balance") @db.Decimal(20,2)
+  sellerDepositTxHash String?  @map("seller_deposit_tx_hash")
+  releaseTxHash       String?  @map("release_tx_hash")
+  platformFee         Decimal  @default(0) @map("platform_fee") @db.Decimal(10,4)
+  networkFee          Decimal  @default(0) @map("network_fee") @db.Decimal(10,4)
+  netAmountToBuyer    Decimal  @default(0) @map("net_amount_to_buyer") @db.Decimal(20,2)
+  expiresAt           DateTime? @map("expires_at")
+  completedAt         DateTime? @map("completed_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+    escrowPrivateKey     String?   @map("escrow_private_key")
+  escrowDerivationPath String?   @map("escrow_derivation_path")
+  bscEscrowAddress      String?  @map("bsc_escrow_address")
+  bscEscrowPrivateKey   String?  @map("bsc_escrow_private_key")
+  depositNetwork        String?  @map("deposit_network") // 'trc20' or 'bep20'
+
+  paymentProof        PaymentProof?
+    paymentDeadline DateTime? @map("payment_deadline")
+
+  dispute             Dispute?
+  review              Review?
+  
+  @@map("trades")
+}
+
+model PaymentProof {
+  id             String   @id @default(uuid())
+  tradeId        String   @unique @map("trade_id")
+  trade          Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  buyerId        String   @map("buyer_id")
+  buyer          User     @relation(fields: [buyerId], references: [id])
+  imageUrl       String   @map("image_url")
+  transactionRef String   @map("transaction_ref")
+  transferTime   DateTime @map("transfer_time")
+  bankName       String   @map("bank_name")
+  last4Digits    String   @map("last_4_digits")
+  createdAt      DateTime @default(now()) @map("created_at")
+  
+  @@map("payment_proofs")
+}
+
+model Dispute {
+  id                String   @id @default(uuid())
+  tradeId           String   @unique @map("trade_id")
+  trade             Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  openedByUserId    String   @map("opened_by_user_id")
+  openedBy          User     @relation("openedBy", fields: [openedByUserId], references: [id])
+  reason            String
+  description       String
+  evidenceUrls      Json     @default("[]")
+  status            String   @default("opened")
+  resolution        String?
+  resolutionNotes   String?  @map("resolution_notes")
+  evidenceDeadline  DateTime? @map("evidence_deadline")
+  resolvedByAdminId String?  @map("resolved_by_admin_id")
+  resolvedBy        User?    @relation("resolvedBy", fields: [resolvedByAdminId], references: [id])
+  resolvedAt        DateTime? @map("resolved_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+    tradeSnapshot     Json?    @map("trade_snapshot")
+
+  @@map("disputes")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  tradeId    String   @unique @map("trade_id")
+  trade      Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  reviewerId String   @map("reviewer_id")
+  reviewer   User     @relation("reviewer", fields: [reviewerId], references: [id])
+  revieweeId String   @map("reviewee_id")
+  reviewee   User     @relation("reviewee", fields: [revieweeId], references: [id])
+  rating     Int
+  comment    String
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  @@unique([tradeId, reviewerId])
+  @@map("reviews")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("info")
+  metadata  Json?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("notifications")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  adminId      String?  @map("admin_id")
+  adminName    String?  @map("admin_name")
+  action       String
+  targetUserId String?  @map("target_user_id")
+  metadata     Json?
+  previousHash String?  @map("previous_hash")
+  hash         String   @unique @map("hash")
+  signature    String?  @map("signature")
+  timestamp    DateTime @default(now())
+  
+  user         User?    @relation("userAuditLogs", fields: [adminId], references: [id])
+  
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedBy   String?  @map("updated_by")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@map("system_settings")
+}
+
+model ExchangeRate {
+  id        Int      @id @default(autoincrement())
+  usdToIls  Decimal  @map("usd_to_ils") @db.Decimal(10,4)
+  updatedAt DateTime @default(now()) @map("updated_at")
+  
+  @@map("exchange_rates")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_reset_tokens")
+}
+model NetworkFee {
+  id         Int      @id @default(autoincrement())
+  network    String   @unique @map("network") // "TRC20", "BEP20"
+  feeAmount  Float    @map("fee_amount") // بالدولار USD
+  energyFee  Int      @map("energy_fee") // بسعر SUN
+  createdAt  DateTime @map("created_at") @default(now())
+  updatedAt  DateTime @map("updated_at") @updatedAt
+  expiresAt  DateTime @map("expires_at")
+  
+  @@map("network_fees")
+}

@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    direction: rtl;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #f9fafb 100%);
+    color: #1f2937;
+    min-height: 100vh;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #1d4ed8;
+  }
+
+  /* Selection */
+  ::selection {
+    background: #3b82f6;
+    color: white;
+  }
+}
+
+@layer components {
+  /* Glass Effect */
+  .glass {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Hero Section */
+  .hero-gradient {
+    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0f9ff 100%);
+  }
+
+  /* Stats Card */
+  .stat-card {
+    @apply bg-white rounded-2xl shadow-soft p-6 text-center transition-all duration-300 hover:shadow-medium hover:-translate-y-1;
+  }
+
+  /* Feature Card */
+  .feature-card {
+    @apply bg-white rounded-2xl shadow-soft p-6 text-center transition-all duration-300 hover:shadow-medium hover:scale-105;
+  }
+
+  /* Offer Card */
+  .offer-card {
+    @apply bg-white rounded-2xl shadow-soft p-5 transition-all duration-300 hover:shadow-medium border border-gray-100;
+  }
+}
+
+@layer utilities {
+  .shadow-soft {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+  
+  .shadow-medium {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+  
+  .shadow-hard {
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+  }
+}

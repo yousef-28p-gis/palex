@@ -1,0 +1,15 @@
+# ===== FILE: c:\Users\PC\Desktop\p2p-backend\.gitignore (أضف هذه الأسطر) =====
+
+.env
+.env.local
+.env.production
+.vault.enc
+*.pem
+*.key
+*.crt
+node_modules/
+dist/
+uploads/
+logs/
+*.log
+.DS_Store
