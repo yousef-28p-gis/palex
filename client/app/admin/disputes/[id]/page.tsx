@@ -220,7 +220,7 @@ function AdminDisputeDetailContent() {
                   {dispute.evidenceUrls.map((url: string, index: number) => {
                     let imageUrl = url;
                     if (url && (url.startsWith('/uploads/') || url.startsWith('uploads/'))) {
-                      imageUrl = `http://localhost:4000/${url.replace(/^\/+/, '')}`;
+                      imageUrl = `/api/${url.replace(/^\/+/, '')}`;
                     }
                     return (
                       <button

@@ -92,8 +92,8 @@ function AdminKycContent() {
 
   const getImageUrl = (path: string) => {
     if (!path) return null;
-    const cleanPath = path.replace(/\\/g, '/');
-    return `http://localhost:4000/${cleanPath}`;
+    const cleanPath = path.replace(/\\\\/g, '/');
+    return `/${cleanPath}`;
   };
 
   if (isLoading) {

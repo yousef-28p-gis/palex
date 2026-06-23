@@ -9,7 +9,6 @@ import toast from 'react-hot-toast';
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const redirectTo = searchParams.get('redirect');
   const message = searchParams.get('message');
   const { login } = useAuth();
@@ -29,17 +28,16 @@ function LoginForm() {
     }
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
     try {
       await login({ email, password }, redirectTo || undefined);
-      router.push(redirectTo || '/dashboard');
+      // ✅ login() في useAuth يتولى التوجيه تلقائياً
     } catch (err: any) {
       const message = err.response?.data?.message || 'فشل تسجيل الدخول';
       setError(message);
-      console.error('Login error:', message);
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +67,7 @@ function LoginForm() {
                   <p className="text-blue-200">أدخل بياناتك للوصول إلى حسابك</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-6">
                   {/* ✅ رسالة الخطأ الثابتة */}
                   {error && (
                     <div className="bg-red-500/20 border border-red-500 rounded-xl p-3 text-red-200 text-sm text-center">
@@ -88,6 +86,7 @@ function LoginForm() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) handleSubmit(e); }}
                         className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                         placeholder="you@hotmail.com"
                         autoComplete="email"
@@ -107,6 +106,7 @@ function LoginForm() {
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) handleSubmit(e); }}
                         className="w-full pr-10 pl-10 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                         placeholder="••••••••"
                         autoComplete="current-password"
@@ -135,7 +135,8 @@ function LoginForm() {
 
                   {/* زر تسجيل الدخول */}
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSubmit}
                     disabled={isLoading}
                     className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
                   >
@@ -152,11 +153,11 @@ function LoginForm() {
                   {/* رابط إنشاء حساب */}
                   <p className="text-center text-sm text-blue-200">
                     ليس لديك حساب؟{' '}
-                    <Link href="/register" className="text-white font-semibold hover:underline">
+                    <Link href="/register" prefetch={false} className="text-white font-semibold hover:underline">
                       إنشاء حساب جديد
                     </Link>
                   </p>
-                </form>
+                </div>
               </div>
             </div>
           </div>

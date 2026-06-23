@@ -53,35 +53,6 @@ export class AuthService {
       },
     });
 
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerified: false,
-        emailVerificationToken: verificationToken,
-        emailVerificationExpires: verificationExpires,
-      },
-    });
-
-    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-    await this.mailService.sendEmail({
-      to: user.email,
-      subject: '✅ تأكيد البريد الإلكتروني - PalEscrow',
-      html: `
-        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">مرحباً ${user.fullName}!</h2>
-          <p>شكراً لتسجيلك في PalEscrow. يرجى تأكيد بريدك الإلكتروني بالضغط على الرابط أدناه:</p>
-          <a href="${frontendUrl}/verify-email?token=${verificationToken}" 
-             style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px; margin: 16px 0;">
-            تأكيد البريد الإلكتروني
-          </a>
-          <p style="font-size: 12px; color: #666;">هذا الرابط صالح لمدة 24 ساعة.</p>
-        </div>
-      `,
-    });
-
     const accessToken = this.tokenService.generateAccessToken(user.id, user.email, user.role);
     const refreshToken = this.tokenService.generateRefreshToken(user.id);
 
@@ -89,7 +60,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'تم إنشاء الحساب بنجاح. يرجى تأكيد بريدك الإلكتروني.',
+      message: 'تم إنشاء الحساب بنجاح.',
       user,
       accessToken,
       refreshToken,
@@ -134,12 +105,13 @@ export class AuthService {
 
     await this.saveRefreshToken(user.id, refreshToken, ip, userAgent);
 
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/api/auth',
+      path: '/',
     });
 
     return {
@@ -231,12 +203,13 @@ export class AuthService {
     await this.prisma.refreshToken.deleteMany({ where: { userId: tokenRecord.user.id } });
     await this.saveRefreshToken(tokenRecord.user.id, newRefreshToken);
 
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
     response.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/api/auth',
+      path: '/',
     });
 
     return { accessToken };
@@ -244,7 +217,13 @@ export class AuthService {
 
   async logout(userId: string, response: Response) {
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
-    response.clearCookie('refreshToken', { path: '/api/auth' });
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    response.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+    });
     return { success: true, message: 'تم تسجيل الخروج' };
   }
 

@@ -3,16 +3,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { tradesApi, offersApi, ratesApi } from '@/lib/api'; // ✅ تم التعديل - إضافة ratesApi
-import { Button } from '@/components/ui/Button';
+import { tradesApi, ratesApi, reviewsApi } from '@/lib/api';
+import { Button, ConfirmModal } from '@/components/ui';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useTradeWebSocket } from '@/hooks/useTradeWebSocket';
+import { onTradeEvent } from '@/lib/socket';
 import { useSoundNotification } from '@/components/ui/SoundNotification';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   Clock, CheckCircle, AlertTriangle, 
   Copy, Check, User, Banknote, Image, Loader2,
   ArrowLeft, Shield, DollarSign, Calendar, XCircle, Upload,
-  Wallet, TrendingUp, Percent, Info
+  Wallet, TrendingUp, Percent, Info, Star, MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -38,12 +40,38 @@ function TradeDetailContent() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // ✅ حالة ConfirmModal
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    consequences?: string[];
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'info';
+    onConfirm: () => void;
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  
+  const openConfirm = (config: Omit<typeof confirmModal, 'isOpen'>) => {
+    setConfirmModal({ ...config, isOpen: true });
+  };
+  const closeConfirm = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  
   const [currentNetworkFee, setCurrentNetworkFee] = useState<number | null>(null);
   const [feesLoading, setFeesLoading] = useState(true);
+
+  // ✅ حالة التقييم
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [existingReview, setExistingReview] = useState<any>(null);
+  const [hasExistingReview, setHasExistingReview] = useState(false);
 
   // WebSocket للإشعارات الفورية
   const { notification: wsNotification, clearNotification: clearWsNotification } = useTradeWebSocket();
   const { showNotification, NotificationComponent, clearNotification } = useSoundNotification();
+  const queryClient = useQueryClient();
 
   // عرض إشعارات WebSocket
   useEffect(() => {
@@ -57,31 +85,32 @@ function TradeDetailContent() {
     }
   }, [wsNotification, showNotification, clearWsNotification]);
 
+  // 🔄 إعادة تحميل الصفقة تلقائياً عند استقبال حدث WebSocket خاص بهذه الصفقة
+  useEffect(() => {
+    if (!tradeId) return;
+    
+    const unsubscribe = onTradeEvent((data) => {
+      if (data.tradeId !== tradeId) return;
+      
+      const refreshEvents = ['trade:deposit', 'trade:proof', 'trade:confirmed', 'trade:update', 'trade:ready'];
+      if (refreshEvents.includes(data._eventType)) {
+        console.log(`🔄 Auto-refreshing trade ${tradeId} due to ${data._eventType}`);
+        loadTrade();
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [tradeId]);
+
   useEffect(() => {
     loadTrade();
   }, [tradeId]);
 
   useEffect(() => {
-    const loadCurrentNetworkFee = async () => {
-      if (!trade) return;
-      try {
-        // ✅ استخدام ratesApi بدلاً من fetch
-        const res = await ratesApi.getAllRates();
-        const fees = res.data?.data?.fees;
-        if (fees) {
-          const fee = trade.network === 'trc20' ? fees.trc20?.fee : fees.bep20?.fee;
-          if (fee && fee > 0) {
-            setCurrentNetworkFee(fee);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load current network fee:', error);
-      } finally {
-        setFeesLoading(false);
-      }
-    };
     if (trade) {
-      loadCurrentNetworkFee();
+      // ✅ القيمة الحالية موجودة بالفعل في trade.networkFee
+      setCurrentNetworkFee(Number(trade.networkFee) || 0);
+      setFeesLoading(false);
     }
   }, [trade]);
 
@@ -112,18 +141,31 @@ function TradeDetailContent() {
       const response = await tradesApi.get(tradeId);
       const tradeData = response.data;
       
-      if (tradeData.offerId) {
-        try {
-          // ✅ استخدام offersApi بدلاً من fetch
-          const offerResponse = await offersApi.getOne(tradeData.offerId);
-          setOffer(offerResponse.data);
-        } catch (err) {
-          console.error('Failed to load offer:', err);
-        }
+      setTrade(tradeData);
+      
+      // ✅ استخدام offer المرفق مع trade مباشرة (بدون طلب API منفصل)
+      if (tradeData.offer) {
+        setOffer(tradeData.offer);
       }
       
-      setTrade(tradeData);
+      // ✅ التحقق من وجود تقييم مسبق لهذه الصفقة
+      try {
+        const reviewRes = await reviewsApi.getTradeReview(tradeId);
+        if (reviewRes.data) {
+          setExistingReview(reviewRes.data);
+          setHasExistingReview(true);
+        }
+      } catch (err) {
+        // لا يوجد تقييم - هذا طبيعي
+        setHasExistingReview(false);
+        setExistingReview(null);
+      }
     } catch (error: any) {
+      // ✅ إذا الصفقة مش موجودة → نوجه بصمت بدون رسالة خطأ
+      if (error.response?.status === 404) {
+        router.push('/trades');
+        return;
+      }
       toast.error(error.response?.data?.message || 'فشل في تحميل الصفقة');
       router.push('/trades');
     } finally {
@@ -189,18 +231,9 @@ function TradeDetailContent() {
     formData.append('last4Digits', last4Digits);
     
     try {
-      // ✅ استخدام tradesApi بدلاً من fetch
-      await tradesApi.submitProof(tradeId, {
-        imageUrl: '',
-        transactionRef,
-        transferTime: new Date().toISOString(),
-        bankName,
-        last4Digits,
-      });
-      
-      // رفع الصورة بشكل منفصل (لأن الـ API الحالي يستقبل image كـ file)
+      // ✅ إرسال multipart مباشرة عبر الـ API (FormData + axios = multipart تلقائياً)
       const token = localStorage.getItem('accessToken');
-      const uploadResponse = await fetch(`http://localhost:4000/api/trades/${tradeId}/payment-proof`, {
+      const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/trades/${tradeId}/payment-proof`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
@@ -245,6 +278,110 @@ function TradeDetailContent() {
     }
   };
 
+  const handleConfirmReceipt = async () => {
+    closeConfirm();
+    if (hasExpired) {
+      toast.error('انتهت المهلة!');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await tradesApi.confirmReceipt(tradeId);
+      toast.success('تم تأكيد استلام USDT 🎉');
+      loadTrade();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'فشل في تأكيد الاستلام');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const promptConfirmReceipt = () => {
+    openConfirm({
+      title: '✅ تأكيد استلام USDT',
+      message: 'هل استلمت USDT في محفظتك؟',
+      consequences: [
+        'سيتم إتمام الصفقة نهائياً',
+        'لن تتمكن من فتح نزاع بعد التأكيد',
+      ],
+      confirmText: 'نعم، استلمت USDT',
+      variant: 'info',
+      onConfirm: handleConfirmReceipt,
+    });
+  };
+
+  // ✅ موافقة البائع على الصفقة
+  const handleApprove = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await tradesApi.approve(trade.id);
+      toast.success(res.data?.message || 'تمت الموافقة على الصفقة ✅');
+      loadTrade();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'فشل في الموافقة');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ✅ رفض البائع للصفقة
+  const handleReject = async () => {
+    closeConfirm();
+    setIsSubmitting(true);
+    try {
+      const res = await tradesApi.reject(trade.id);
+      toast.success((res as any).data?.message || 'تم رفض الصفقة');
+      loadTrade();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'فشل في الرفض');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const promptReject = () => {
+    openConfirm({
+      title: '⚠️ رفض الصفقة',
+      message: 'هل أنت متأكد من رفض هذه الصفقة؟',
+      consequences: [
+        'سيتم إلغاء الصفقة نهائياً',
+        'لا يمكن التراجع عن هذا الإجراء',
+      ],
+      confirmText: 'نعم، رفض الصفقة',
+      variant: 'danger',
+      onConfirm: handleReject,
+    });
+  };
+
+  // ✅ إرسال التقييم
+  const handleSubmitReview = async () => {
+    if (reviewRating === 0) {
+      toast.error('يرجى اختيار تقييم');
+      return;
+    }
+    setIsSubmittingReview(true);
+    try {
+      const res = await reviewsApi.create({
+        tradeId,
+        rating: reviewRating,
+        comment: reviewComment,
+      });
+      // ✅ استخدام التقييم من الاستجابة مباشرة (بدون إعادة تحميل الصفقة)
+      if (res.data?.review) {
+        setExistingReview(res.data.review);
+        setHasExistingReview(true);
+      }
+      // ✅ تحديث تقييم البائع في المتجر فوراً
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+      toast.success('تم إرسال تقييمك ✅');
+      setShowReviewForm(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'فشل في إرسال التقييم');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
@@ -255,8 +392,12 @@ function TradeDetailContent() {
         return { label: 'في انتظار دفع المشتري', color: 'bg-blue-500/20 text-blue-300', icon: <Clock className="w-4 h-4" /> };
       case 'waiting_seller_deposit':
         return { label: 'في انتظار إيداع البائع', color: 'bg-yellow-500/20 text-yellow-300', icon: <Clock className="w-4 h-4" /> };
+      case 'pending_seller_approval':
+        return { label: 'بانتظار موافقة البائع', color: 'bg-purple-500/20 text-purple-300', icon: <Clock className="w-4 h-4" /> };
       case 'waiting_seller_confirmation':
         return { label: 'في انتظار تأكيد البائع', color: 'bg-orange-500/20 text-orange-300', icon: <Clock className="w-4 h-4" /> };
+      case 'waiting_buyer_confirm':
+        return { label: 'بانتظار تأكيد المشتري', color: 'bg-teal-500/20 text-teal-300', icon: <CheckCircle className="w-4 h-4" /> };
       case 'dispute_opened':
         return { label: 'نزاع مفتوح', color: 'bg-red-500/20 text-red-300', icon: <AlertTriangle className="w-4 h-4" /> };
       default:
@@ -266,11 +407,15 @@ function TradeDetailContent() {
 
   const getImageUrl = (path: string) => {
     if (!path) return null;
+    const cleanPath = path.replace(/\\\\/g, '/');
+    return `/api/${cleanPath}`;
+  };
+
+  const getUploadUrl = (path: string) => {
+    if (!path) return null;
     const cleanPath = path.replace(/\\/g, '/');
-    if (cleanPath.startsWith('uploads/')) {
-      return `http://localhost:4000/${cleanPath}`;
-    }
-    return `http://localhost:4000/${cleanPath}`;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || '';
+    return cleanPath.startsWith('/') ? `${baseUrl}${cleanPath}` : `${baseUrl}/${cleanPath}`;
   };
 
   if (isLoading || feesLoading) {
@@ -311,8 +456,9 @@ function TradeDetailContent() {
   const currencySymbol = trade.fiatCurrency === 'ils' ? '₪' : '$';
   const canSubmitProof = isBuyer && trade.status === 'active';
   const canConfirmPayment = isSeller && trade.status === 'waiting_seller_confirmation';
+  const canConfirmReceipt = isBuyer && trade.status === 'waiting_buyer_confirm';
   const status = getStatusBadge(trade.status);
-  const canOpenDispute = trade.status !== 'completed' && trade.status !== 'cancelled' && trade.status !== 'expired' && trade.dispute?.status !== 'resolved';
+  const canOpenDispute = isSeller && trade.status === 'waiting_seller_confirmation' && !trade.dispute;
 
   const amount = Number(trade.amountUsdt);
   const platformFee = amount * 0.01;
@@ -360,8 +506,34 @@ function TradeDetailContent() {
               {hasExpired ? 'انتهت المهلة' : `الوقت المتبقي: ${remainingTime}`}
             </span>
           </div>
-          <p className="text-blue-300 text-xs mt-2">المهلة الإجمالية 30 دقيقة لإتمام الصفقة بالكامل</p>
+          <p className="text-blue-300 text-xs mt-2">
+            {trade.status === 'pending_seller_approval' ? 'مهلة الموافقة 10 دقائق' : 'مهلة الدفع 30 دقيقة'}
+          </p>
         </div>
+
+        {trade.status === 'pending_seller_approval' && (
+          <div className="bg-purple-500/10 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6 mb-6 text-center">
+            {isSeller ? (
+              <>
+                <h2 className="text-xl font-bold text-white mb-2">🆕 صفقة جديدة</h2>
+                <p className="text-purple-300 mb-4">يريد المشتري شراء <strong className="text-white">{amount} USDT</strong></p>
+                <div className="flex gap-4 justify-center">
+                  <button onClick={handleApprove} className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-lg transition-all">
+                    ✅ قبول
+                  </button>
+                  <button onClick={promptReject} className="px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-lg transition-all">
+                    ❌ رفض
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-white mb-2">⏳ بانتظار موافقة البائع</h2>
+                <p className="text-purple-300">يرجى الانتظار حتى يوافق البائع على الصفقة</p>
+              </>
+            )}
+          </div>
+        )}
 
         {isSeller && trade.status === 'waiting_seller_deposit' && (
           <div className="bg-yellow-500/10 backdrop-blur-xl rounded-2xl border border-yellow-500/30 p-6 mb-6">
@@ -395,7 +567,7 @@ function TradeDetailContent() {
               </div>
             </div>
             {process.env.NODE_ENV === 'development' && (
-              <button onClick={async () => { const res = await fetch(`http://localhost:4000/api/trades/${trade.id}/mock-deposit`, { method: 'POST' }); if (res.ok) { toast.success('تم محاكاة الإيداع'); setTimeout(() => window.location.reload(), 1500); } }} className="w-full mt-4 py-2 bg-purple-600 text-white rounded-xl">🔧 محاكاة: تم إيداع USDT</button>
+              <button onClick={async () => { try { await tradesApi.mockDeposit(trade.id); toast.success('تم محاكاة الإيداع'); loadTrade(); } catch (e: any) { toast.error(e.response?.data?.message || 'فشلت محاكاة الإيداع'); } }} className="w-full mt-4 py-2 bg-purple-600 text-white rounded-xl">🔧 محاكاة: تم إيداع USDT</button>
             )}
           </div>
         )}
@@ -534,7 +706,7 @@ function TradeDetailContent() {
                   <div className="bg-white/5 rounded-xl p-4 mb-4">
                     <h3 className="text-white font-semibold mb-3">📎 إثبات الدفع المرفوع</h3>
                     <div className="flex flex-col md:flex-row gap-4">
-                      {trade.paymentProof.imageUrl && <img src={getImageUrl(trade.paymentProof.imageUrl)} className="rounded-lg max-h-48 object-contain" />}
+                      {trade.paymentProof.imageUrl && <img src={getUploadUrl(trade.paymentProof.imageUrl)} className="rounded-lg max-h-48 object-contain" />}
                       <div className="space-y-2 text-sm flex-1">
                         <p><span className="text-blue-300">رقم العملية:</span> {trade.paymentProof.transactionRef}</p>
                         <p><span className="text-blue-300">البنك:</span> {trade.paymentProof.bankName}</p>
@@ -550,6 +722,143 @@ function TradeDetailContent() {
           </div>
         )}
 
+        {/* ✅ قسم تأكيد استلام USDT - للمشتري فقط بعد تحرير USDT */}
+        {canConfirmReceipt && (
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 mb-6">
+            <h2 className="text-xl font-bold text-white mb-4">تأكيد استلام USDT</h2>
+            
+            {hasExpired ? (
+              <div className="bg-red-500/20 rounded-xl p-4 text-center mb-4">
+                <p className="text-red-400 font-semibold">⚠️ انتهت المهلة!</p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-3 mb-4">
+                  <p className="text-teal-300 text-sm">⏰ الوقت المتبقي لتأكيد الاستلام: <span className="font-bold">{remainingTime}</span></p>
+                </div>
+                
+                {trade.releaseTxHash && (
+                  <div className="bg-white/5 rounded-xl p-4 mb-4">
+                    <p className="text-blue-300 text-xs mb-1">رقم المعاملة على البلوكشين:</p>
+                    <p className="text-white text-xs font-mono break-all">{trade.releaseTxHash}</p>
+                  </div>
+                )}
+
+                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 mb-4">
+                  <p className="text-green-300 text-sm">✅ تم تحرير {Number(trade.netAmountToBuyer).toFixed(2)} USDT إلى محفظتك. يرجى التأكد من استلامها.</p>
+                </div>
+                
+                <Button onClick={promptConfirmReceipt} loading={isSubmitting} className="w-full">
+                  <CheckCircle className="w-4 h-4 ml-2" />تأكيد استلام USDT
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ✅ قسم التقييم - يظهر للمشتري بعد إتمام الصفقة */}
+        {trade.status === 'completed' && isBuyer && (
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 mb-6">
+            {hasExistingReview && existingReview ? (
+              // ✅ تم التقييم مسبقاً
+              <>
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                  تقييمك للبائع
+                </h3>
+                <div className="flex items-center gap-2 mb-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-6 h-6 ${
+                        star <= existingReview.rating
+                          ? 'text-yellow-400 fill-yellow-400'
+                          : 'text-gray-500'
+                      }`}
+                    />
+                  ))}
+                  <span className="text-white mr-3 font-semibold">{existingReview.rating}/5</span>
+                </div>
+                {existingReview.comment && (
+                  <p className="text-blue-200 text-sm">"{existingReview.comment}"</p>
+                )}
+                <p className="text-green-400 text-xs mt-3">✅ تم تقييم هذه الصفقة</p>
+              </>
+            ) : showReviewForm ? (
+              // ✅ نموذج التقييم
+              <>
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-400" />
+                  تقييم البائع
+                </h3>
+                
+                {/* اختيار النجوم */}
+                <div className="flex items-center gap-1 mb-4">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className={`w-8 h-8 ${
+                          star <= (hoverRating || reviewRating)
+                            ? 'text-yellow-400 fill-yellow-400'
+                            : 'text-gray-500'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-white mr-3">
+                    {reviewRating > 0 ? `${reviewRating}/5` : 'اختر تقييم'}
+                  </span>
+                </div>
+                
+                {/* تعليق اختياري */}
+                <textarea
+                  placeholder="أكتب تعليقاً (اختياري)..."
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 resize-none mb-4"
+                />
+                
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleSubmitReview}
+                    loading={isSubmittingReview}
+                    className="flex-1"
+                  >
+                    <Star className="w-4 h-4 ml-2 fill-current" />
+                    إرسال التقييم
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowReviewForm(false)}
+                    className="bg-white/5 border border-white/20 hover:bg-white/10"
+                  >
+                    إلغاء
+                  </Button>
+                </div>
+              </>
+            ) : (
+              // ✅ زر فتح التقييم
+              <div className="text-center py-2">
+                <p className="text-blue-200 text-sm mb-4">
+                  هل تريد تقييم تجربتك مع البائع {trade.seller?.fullName}؟
+                </p>
+                <Button onClick={() => setShowReviewForm(true)}>
+                  <Star className="w-4 h-4 ml-2" />
+                  تقييم البائع
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {isBuyer && trade.seller?.bankAccount && (
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-5">
             <h3 className="font-semibold text-white mb-4 flex items-center gap-2"><Banknote className="w-4 h-4 text-green-400" />بيانات البائع البنكية</h3>
@@ -561,6 +870,19 @@ function TradeDetailContent() {
           </div>
         )}
       </div>
+      
+      {/* ✅ ConfirmModal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirm}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        consequences={confirmModal.consequences}
+        confirmText={confirmModal.confirmText}
+        variant={confirmModal.variant}
+        isLoading={isSubmitting}
+      />
     </div>
   );
 }

@@ -20,6 +20,8 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { RatesModule } from './modules/rates/rates.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
+import { ReviewModule } from './modules/review/review.module';
+import { StatsModule } from './modules/stats/stats.module';
 
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PrismaService } from './shared/services/prisma.service';
@@ -63,6 +65,8 @@ import { EncryptionService } from './shared/services/encryption.service';
     WalletModule,
     RatesModule,
     SchedulerModule,
+    ReviewModule,
+    StatsModule,
   ],
   providers: [
     PrismaService,

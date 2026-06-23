@@ -14,9 +14,21 @@ import { PrismaService } from '../../shared/services/prisma.service';
 
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: (origin, callback) => {
+      // السماح للتطوير المحلي
+      if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+      // السماح لـ Cloudflare Tunnel
+      if (/\.trycloudflare\.com$/.test(origin)) {
+        return callback(null, true);
+      }
+      callback(null, true); // السماح بأي نطاق في التطوير
+    },
     credentials: true,
   },
+  path: '/api/ws',
+  addTrailingSlash: false,  // ✅ لا تضف trailing slash (لأن Next.js rewrite يزيله)
   namespace: 'trades',
 })
 export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -25,8 +37,6 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(TradeGateway.name);
   private userSockets: Map<string, string[]> = new Map();
-  private pendingTimeouts: Map<string, NodeJS.Timeout> = new Map();
-  private pendingIntervals: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(
     private jwtService: JwtService,
@@ -129,122 +139,6 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
       isActive: true,
       timestamp: new Date(),
     });
-  }
-
-  // ✅ 1. المشتري يطلب تأكيد وجود البائع (مرحلة ما قبل الصفقة)
-  @SubscribeMessage('trade:request')
-  async handleTradeRequest(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { offerId: string; amount: number; buyerId: string; buyerName: string },
-  ) {
-    this.logger.log(`📢 Trade request for offer ${data.offerId} from buyer ${data.buyerId}`);
-
-    const offer = await this.prisma.offer.findUnique({
-      where: { id: data.offerId },
-      include: { seller: true },
-    });
-
-    if (!offer) {
-      client.emit('trade:error', { message: 'العرض غير موجود' });
-      return;
-    }
-
-    const sellerId = offer.sellerId;
-    const pendingId = `pending_${Date.now()}_${data.offerId}`;
-
-    const pendingMessage = {
-      pendingId,
-      offerId: data.offerId,
-      amount: data.amount,
-      buyerName: data.buyerName,
-      buyerId: data.buyerId,
-      message: `📢 لديك طلب شراء جديد!`,
-      details: {
-        amount: `${data.amount} USDT`,
-        buyer: data.buyerName,
-        timeLimit: '10 دقائق',
-      },
-      countdown: 600,
-    };
-
-    this.sendToUser(sellerId, 'trade:pending', pendingMessage);
-
-    const interval = setInterval(() => {
-      if (this.pendingTimeouts.has(pendingId)) {
-        this.sendToUser(sellerId, 'trade:pending', {
-          ...pendingMessage,
-          reminder: true,
-          message: `🔔 تذكير: لديك طلب شراء بمبلغ ${data.amount} USDT من ${data.buyerName}. يرجى تأكيد وجودك.`,
-        });
-      } else {
-        clearInterval(interval);
-        this.pendingIntervals.delete(pendingId);
-      }
-    }, 30000);
-
-    this.pendingIntervals.set(pendingId, interval);
-
-    const timeout = setTimeout(async () => {
-      clearInterval(interval);
-      this.pendingIntervals.delete(pendingId);
-      this.pendingTimeouts.delete(pendingId);
-
-      this.sendToUser(data.buyerId, 'trade:timeout', {
-        message: '⏰ انتهت المهلة، لم يؤكد البائع وجوده.',
-        details: {
-          offerId: data.offerId,
-          amount: data.amount,
-          reason: 'لم يستجب البائع خلال 10 دقائق',
-        },
-        suggestion: 'يمكنك المحاولة مرة أخرى أو اختيار بائع آخر',
-      });
-
-      client.emit('trade:timeout', { 
-        message: 'لم يؤكد البائع وجوده خلال 10 دقائق',
-        offerId: data.offerId,
-      });
-    }, 10 * 60 * 1000);
-
-    this.pendingTimeouts.set(pendingId, timeout);
-
-    return { success: true, pendingId, message: 'جاري انتظار تأكيد البائع' };
-  }
-
-  // ✅ 2. البائع يؤكد وجوده (أنا موجود)
-  @SubscribeMessage('trade:confirm')
-  async handleTradeConfirm(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { pendingId: string; offerId: string; sellerId: string; buyerId: string },
-  ) {
-    this.logger.log(`✅ Seller ${data.sellerId} confirmed presence for pending ${data.pendingId}`);
-
-    const timeout = this.pendingTimeouts.get(data.pendingId);
-    if (timeout) {
-      clearTimeout(timeout);
-      this.pendingTimeouts.delete(data.pendingId);
-    }
-
-    const interval = this.pendingIntervals.get(data.pendingId);
-    if (interval) {
-      clearInterval(interval);
-      this.pendingIntervals.delete(data.pendingId);
-    }
-
-    const offer = await this.prisma.offer.findUnique({
-      where: { id: data.offerId },
-      include: { seller: true },
-    });
-
-    if (offer) {
-      this.sendToUser(data.buyerId, 'trade:ready', {
-        message: '✅ البائع جاهز! يمكنك بدء الصفقة الآن.',
-        sellerName: offer.seller.fullName,
-        offerId: data.offerId,
-        action: 'start_trade',
-      });
-    }
-
-    return { success: true, message: 'تم تأكيد وجود البائع، يمكن للمشتري بدء الصفقة' };
   }
 
   // ✅ 3. إشعار بإيداع USDT

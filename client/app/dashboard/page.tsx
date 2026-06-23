@@ -37,6 +37,21 @@ function DashboardContent() {
   // ✅ منع التحميل المزدوج
   const initialLoadDone = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isAuthRefreshing, setIsAuthRefreshing] = useState(true);
+
+  // ✅ جلب أحدث بيانات المستخدم عند فتح الصفحة
+  useEffect(() => {
+    const refreshAuth = async () => {
+      try {
+        await refreshUser();
+      } catch (err) {
+        console.error('فشل تحديث بيانات المستخدم:', err);
+      } finally {
+        setIsAuthRefreshing(false);
+      }
+    };
+    refreshAuth();
+  }, []);
 
   // ✅ إعادة جلب البيانات عند العودة من صفحة الصفقة
   useEffect(() => {
@@ -195,6 +210,15 @@ function DashboardContent() {
         return { label: status, color: 'bg-gray-500/20 text-gray-300', icon: <Clock className="w-3 h-3" /> };
     }
   };
+
+  // ✅ انتظار تحديث بيانات المستخدم أولاً
+  if (isAuthRefreshing) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

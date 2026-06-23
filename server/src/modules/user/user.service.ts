@@ -255,11 +255,12 @@ export class UserService {
     
     if (!user) throw new NotFoundException('المستخدم غير موجود');
     
-    // التحقق مما إذا كان المستخدم ضمن ساعات العمل
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentDay = now.getDay();
+    // ✅ استخدام توقيت غزة
+    const gazaTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Gaza' });
+    const gazaDate = new Date(gazaTime);
+    const currentHour = gazaDate.getHours();
+    const currentMinute = gazaDate.getMinutes();
+    const currentDay = gazaDate.getDay();
     
     let isWithinWorkHours = true;
     
@@ -277,10 +278,15 @@ export class UserService {
     const workDaysArray = (user.workDays as number[]) || [0, 1, 2, 3, 4, 5, 6];
     const isWorkDay = workDaysArray.includes(currentDay);
     
+    // ✅ مهلة 3 دقائق: إذا كان البائع متصلاً خلال آخر 3 دقائق نعتبره متاحاً
+    const RECENT_ACTIVITY_MS = 3 * 60 * 1000;
+    const recentlyActive = user.lastSeenAt && (new Date().getTime() - new Date(user.lastSeenAt).getTime()) < RECENT_ACTIVITY_MS;
+    
     return {
       userId: user.id,
       fullName: user.fullName,
-      isOnline: user.isActiveNow && isWithinWorkHours && isWorkDay,
+      isOnline: user.isActiveNow || recentlyActive,
+      isAvailable: isWithinWorkHours && isWorkDay,
       isActiveNow: user.isActiveNow,
       lastSeenAt: user.lastSeenAt,
       isWithinWorkHours,

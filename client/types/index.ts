@@ -28,6 +28,12 @@ export interface Offer {
     totalTrades: number;
     trustLevel: string;
     kycStatus: string;
+    profileImageUrl?: string;
+    workHoursStart?: string;
+    workHoursEnd?: string;
+    workDays?: number[];
+    isActiveNow?: boolean;
+    lastSeenAt?: string;
   };
   price: number;
   fiatCurrency: 'ils' | 'usd';
@@ -85,10 +91,16 @@ export interface PaymentProof {
   tradeId: string;
   imageUrl: string;
   transactionRef: string;
-  transferTime: string;
   bankName: string;
   last4Digits: string;
   createdAt: string;
+}
+
+export interface SubmitProofData {
+  imageUrl: string;
+  transactionRef: string;
+  bankName: string;
+  last4Digits: string;
 }
 
 // ==================== Dispute Types ====================

@@ -10,7 +10,6 @@ import { SubmitPaymentProofDto } from './dto/submit-payment-proof.dto';
 export class TradeService {
   private readonly logger = new Logger(TradeService.name);
   private readonly timeouts = new Map<string, NodeJS.Timeout>();
-  private pendingRequests = new Map<string, { buyerId: string; offerId: string; amount: number; buyerName: string }>();
 
   constructor(
     private prisma: PrismaService,
@@ -21,9 +20,11 @@ export class TradeService {
 
   private getStatusText(status: string): string {
     const statusMap: Record<string, string> = {
+      'pending_seller_approval': 'انتظار موافقة البائع',
       'waiting_seller_deposit': 'انتظار إيداع البائع',
       'active': 'نشطة - انتظار دفع المشتري',
       'waiting_seller_confirmation': 'انتظار تأكيد البائع',
+      'waiting_buyer_confirm': 'انتظار تأكيد المشتري',
       'completed': 'مكتملة',
       'cancelled': 'ملغاة',
       'dispute_opened': 'نزاع مفتوح',
@@ -37,8 +38,27 @@ export class TradeService {
     if (timeout) {
       clearTimeout(timeout);
       this.timeouts.delete(tradeId);
-      this.logger.log(`✅ Cancelled expiry timeout for trade ${tradeId}`);
     }
+  }
+
+  // ✅ حساب successRate للمستخدم
+  private async updateSuccessRate(userId: string) {
+    const [completed, cancelled] = await Promise.all([
+      this.prisma.trade.count({
+        where: { OR: [{ sellerId: userId }, { buyerId: userId }], status: 'completed' },
+      }),
+      this.prisma.trade.count({
+        where: { OR: [{ sellerId: userId }, { buyerId: userId }], status: 'cancelled' },
+      }),
+    ]);
+
+    const total = completed + cancelled;
+    const rate = total > 0 ? Number(((completed / total) * 100).toFixed(2)) : 0;
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { successRate: rate },
+    });
   }
 
   private scheduleExpiryHandler(tradeId: string, expiresAt: Date) {
@@ -58,114 +78,7 @@ export class TradeService {
     this.logger.log(`⏰ Scheduled expiry handler for trade ${tradeId} in ${Math.round(timeUntilExpiry / 60000)} minutes`);
   }
 
-  // ✅ إعلام المشتري بانتهاء مهلة البائع
-  private async notifyBuyerOfSellerTimeout(tradeId: string, buyerId: string, sellerName: string) {
-    const buyer = await this.prisma.user.findUnique({
-      where: { id: buyerId },
-      select: { email: true, fullName: true }
-    });
-    
-    if (buyer) {
-      await this.mailService.sendEmail({
-        to: buyer.email,
-        subject: '⚠️ انتهت مهلة البائع - PalEscrow',
-        html: `
-          <div dir="rtl">
-            <h2>مرحباً ${buyer.fullName}</h2>
-            <p>لم يقم البائع ${sellerName} بإرسال USDT خلال المهلة المحددة (30 دقيقة).</p>
-            <p>تم إلغاء الصفقة تلقائياً.</p>
-            <p>يمكنك شراء USDT من بائع آخر.</p>
-            <hr />
-            <p style="font-size: 12px; color: #666;">إذا كان لديك استفسار، يرجى مراجعة الدعم الفني.</p>
-          </div>
-        `,
-      });
-      
-      // إرسال إشعار WebSocket
-      this.tradeGateway.sendToUser(buyerId, 'trade:timeout', {
-        message: 'لم يقم البائع بإرسال USDT خلال المهلة. تم إلغاء الصفقة.',
-        tradeId,
-      });
-    }
-  }
-
-  // ✅ طلب تأكيد وجود البائع (مرحلة ما قبل الصفقة)
-  async requestSellerConfirmation(offerId: string, amount: number, buyerId: string, buyerName: string) {
-    const offer = await this.prisma.offer.findUnique({
-      where: { id: offerId, status: 'active' },
-      include: { seller: true },
-    });
-
-    if (!offer) {
-      throw new NotFoundException('العرض غير موجود');
-    }
-
-    if (offer.seller.isSuspended) {
-      throw new BadRequestException('البائع موقوف حالياً، لا يمكن الشراء منه');
-    }
-
-    const pendingId = `pending_${Date.now()}_${offerId}`;
-    
-    this.pendingRequests.set(pendingId, {
-      buyerId,
-      offerId,
-      amount,
-      buyerName,
-    });
-
-    this.tradeGateway.sendToUser(offer.sellerId, 'trade:pending', {
-      pendingId,
-      offerId,
-      amount,
-      buyerName,
-      message: `📢 لديك طلب شراء بمبلغ ${amount} USDT من ${buyerName}. اضغط "أنا موجود" لتأكيد وجودك.`,
-      countdown: 600,
-    });
-
-    await this.mailService.sendEmail({
-      to: offer.seller.email,
-      subject: '🆕 طلب شراء جديد - PalEscrow',
-      html: `<div dir="rtl"><h2>مرحباً ${offer.seller.fullName}</h2>
-      <p>يوجد طلب شراء جديد بمبلغ ${amount} USDT من ${buyerName}.</p>
-      <p>يرجى تسجيل الدخول وتأكيد وجودك خلال 10 دقائق.</p></div>`,
-    });
-
-    const timeout = setTimeout(() => {
-      this.pendingRequests.delete(pendingId);
-      this.tradeGateway.sendToUser(buyerId, 'trade:timeout', {
-        message: 'انتهت المهلة، لم يؤكد البائع وجوده. يرجى المحاولة مرة أخرى.',
-      });
-    }, 10 * 60 * 1000);
-
-    this.timeouts.set(pendingId, timeout);
-
-    return { success: true, pendingId, message: 'جاري انتظار تأكيد البائع' };
-  }
-
-  // ✅ البائع يؤكد وجوده
-  async confirmSellerPresence(pendingId: string, offerId: string, sellerId: string) {
-    const pendingRequest = this.pendingRequests.get(pendingId);
-    if (!pendingRequest) {
-      throw new BadRequestException('الطلب غير موجود أو انتهت صلاحيته');
-    }
-
-    const timeout = this.timeouts.get(pendingId);
-    if (timeout) {
-      clearTimeout(timeout);
-      this.timeouts.delete(pendingId);
-    }
-
-    this.pendingRequests.delete(pendingId);
-
-    this.tradeGateway.sendToUser(pendingRequest.buyerId, 'trade:ready', {
-      message: 'البائع جاهز، يمكنك بدء الصفقة الآن',
-      sellerId,
-      offerId,
-    });
-
-    return { success: true, message: 'تم تأكيد وجود البائع' };
-  }
-
+  // ✅ بدء صفقة مباشرة مع تحقق البائع متصل + وجود محفظة للمشتري
   async startTrade(userId: string, dto: StartTradeDto) {
     const buyer = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -175,8 +88,16 @@ export class TradeService {
     if (!buyer) throw new NotFoundException('المستخدم غير موجود');
     if (buyer.isSuspended) throw new ForbiddenException('حسابك موقوف');
     if (buyer.kycStatus !== 'approved') throw new BadRequestException('يجب إكمال توثيق الهوية أولاً');
-    if (!buyer.trc20Wallet && !buyer.bscWallet) {
-      throw new BadRequestException('يرجى إضافة عنوان محفظة USDT أولاً');
+
+    // 🛑 منع المشتري من فتح أكثر من صفقة نشطة في نفس الوقت
+    const activeBuyerTrades = await this.prisma.trade.count({
+      where: {
+        buyerId: userId,
+        status: { in: ['pending_seller_approval', 'waiting_seller_deposit', 'active', 'waiting_seller_confirmation'] },
+      },
+    });
+    if (activeBuyerTrades > 0) {
+      throw new BadRequestException('لا يمكنك فتح صفقة جديدة أثناء وجود صفقة نشطة. أكمل الصفقة الحالية أولاً.');
     }
 
     const offer = await this.prisma.offer.findFirst({
@@ -185,6 +106,19 @@ export class TradeService {
     });
     
     if (!offer) throw new NotFoundException('العرض غير موجود');
+
+    // 🛑 منع البائع من شراء طلبه الخاص
+    if (offer.sellerId === userId) {
+      throw new BadRequestException('لا يمكنك شراء طلب البيع الخاص بك');
+    }
+
+    // ✅ التحقق من وجود محفظة للمشتري تناسب شبكة البائع
+    if (offer.network === 'trc20' && !buyer.trc20Wallet) {
+      throw new BadRequestException('يجب إضافة محفظة TRC20 أولاً من صفحة الملف الشخصي لاستلام USDT على شبكة TRC20');
+    }
+    if (offer.network === 'bep20' && !buyer.bscWallet) {
+      throw new BadRequestException('يجب إضافة محفظة BSC (BEP20) أولاً من صفحة الملف الشخصي لاستلام USDT على شبكة BEP20');
+    }
 
     const exchangeRateRecord = await this.prisma.exchangeRate.findFirst();
     if (!exchangeRateRecord) {
@@ -235,7 +169,7 @@ export class TradeService {
     const netAmountToBuyer = dto.amountUsdt - platformFee - networkFee;
     const totalFiat = dto.amountUsdt * livePrice;
     
-    const deadline = new Date(Date.now() + 30 * 60 * 1000);
+    const deadline = new Date(Date.now() + 10 * 60 * 1000);
     
     const trade = await this.prisma.trade.create({
       data: {
@@ -248,7 +182,7 @@ export class TradeService {
         totalFiat: totalFiat,
         fiatCurrency: offer.fiatCurrency,
         network: offer.network,
-        status: 'waiting_seller_deposit',
+        status: 'pending_seller_approval',
         platformFee: platformFee,
         networkFee: networkFee,
         netAmountToBuyer: netAmountToBuyer,
@@ -260,15 +194,21 @@ export class TradeService {
       const escrowAddress = await this.walletService.createEscrowAddress(trade.id, offer.network as 'trc20' | 'bep20');
       this.logger.log(`✅ Created escrow address for trade ${trade.id}: ${escrowAddress}`);
     } catch (error) {
-      this.logger.error(`Failed to create escrow address: ${error.message}`);
+      this.logger.error(`Failed to create escrow address for trade ${trade.id}: ${error.message}`);
+      // لا نلغي الصفقة — نكمل والضمان سيكون فارغاً
     }
+
+    // إعادة تحميل trade بعد تحديث escrowAddress
+    const updatedTrade = await this.prisma.trade.findUnique({
+      where: { id: trade.id },
+    });
 
     this.scheduleExpiryHandler(trade.id, deadline);
 
     this.tradeGateway.sendToUser(offer.sellerId, 'trade:update', {
       tradeId: trade.id,
-      status: 'waiting_seller_deposit',
-      message: `🆕 صفقة جديدة بمبلغ ${dto.amountUsdt} USDT. يرجى إرسال USDT خلال 30 دقيقة.`,
+      status: 'pending_seller_approval',
+      message: `🆕 صفقة جديدة بمبلغ ${dto.amountUsdt} USDT. يرجى الموافقة أو الرفض خلال 10 دقائق.`,
       amount: dto.amountUsdt,
       buyerName: buyer.fullName,
     });
@@ -280,10 +220,70 @@ export class TradeService {
       <p>لديك صفقة جديدة بمبلغ ${dto.amountUsdt} USDT.</p>
       <p>السعر: ${livePrice.toFixed(4)} ${offer.fiatCurrency === 'ils' ? '₪' : '$'}</p>
       <p>المبلغ الإجمالي للتحويل: ${totalFiat.toFixed(2)} ${offer.fiatCurrency === 'ils' ? '₪' : '$'}</p>
-      <p>لديك 30 دقيقة لإرسال USDT إلى عنوان الضمان.</p></div>`,
+      <p>لديك 10 دقائق للموافقة على الصفقة أو رفضها.</p></div>`,
     });
 
-    return { success: true, message: 'تم بدء الصفقة بنجاح', trade };
+    return { success: true, message: 'تم بدء الصفقة بنجاح', trade: updatedTrade };
+  }
+
+  // ✅ موافقة البائع على الصفقة
+  async sellerApproveTrade(tradeId: string, userId: string) {
+    const trade = await this.prisma.trade.findFirst({
+      where: { id: tradeId, sellerId: userId, status: 'pending_seller_approval' },
+    });
+    
+    if (!trade) throw new NotFoundException('الصفقة غير موجودة أو تم البت فيها مسبقاً');
+    
+    if (trade.expiresAt && new Date(trade.expiresAt) < new Date()) {
+      throw new BadRequestException('انتهت مهلة الموافقة');
+    }
+    
+    this.cancelExpiryTimeout(tradeId);
+    
+    // 30 دقيقة لإيداع البائع بعد الموافقة
+    const depositDeadline = new Date(Date.now() + 30 * 60 * 1000);
+    
+    await this.prisma.trade.update({
+      where: { id: tradeId },
+      data: {
+        status: 'waiting_seller_deposit',
+        expiresAt: depositDeadline,
+      },
+    });
+    
+    this.scheduleExpiryHandler(tradeId, depositDeadline);
+    
+    this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+      tradeId,
+      status: 'waiting_seller_deposit',
+      message: '✅ وافق البائع على الصفقة، يرجى تحويل المبلغ للبائع',
+    });
+    
+    return { success: true, message: 'تمت الموافقة على الصفقة' };
+  }
+
+  // ✅ رفض البائع للصفقة
+  async sellerRejectTrade(tradeId: string, userId: string) {
+    const trade = await this.prisma.trade.findFirst({
+      where: { id: tradeId, sellerId: userId, status: 'pending_seller_approval' },
+    });
+    
+    if (!trade) throw new NotFoundException('الصفقة غير موجودة أو تم البت فيها مسبقاً');
+    
+    this.cancelExpiryTimeout(tradeId);
+    
+    await this.prisma.trade.update({
+      where: { id: tradeId },
+      data: { status: 'cancelled' },
+    });
+    
+    this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+      tradeId,
+      status: 'cancelled',
+      message: '❌ رفض البائع الصفقة',
+    });
+    
+    return { success: true, message: 'تم رفض الصفقة' };
   }
 
   async getUserTrades(userId: string, page: number, limit: number, status?: string) {
@@ -439,12 +439,12 @@ export class TradeService {
       throw new BadRequestException('انتهت المهلة! لا يمكنك تأكيد الدفع.');
     }
 
-    const buyerWallet = trade.buyer.trc20Wallet || trade.buyer.bscWallet;
+    // استخدم شبكة الصفقة (من العرض) بدلاً من تخمينها من المحفظة
+    const network: 'trc20' | 'bep20' = trade.network === 'bep20' ? 'bep20' : 'trc20';
+    const buyerWallet = network === 'bep20' ? trade.buyer.bscWallet : trade.buyer.trc20Wallet;
     if (!buyerWallet) {
       throw new BadRequestException('المشتري لم يحدد عنوان محفظته بعد');
     }
-    
-    const network = buyerWallet.startsWith('0x') ? 'bep20' : 'trc20';
     
     let currentNetworkFee = Number(trade.networkFee);
     if (network === 'trc20') {
@@ -475,27 +475,75 @@ export class TradeService {
 
     this.cancelExpiryTimeout(tradeId);
 
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
     await this.prisma.trade.update({
       where: { id: tradeId },
       data: {
-        status: 'completed',
-        completedAt: new Date(),
+        status: 'waiting_buyer_confirm',
+        expiresAt,
         releaseTxHash: releaseResult.txHash,
         networkFee: currentNetworkFee,
         netAmountToBuyer: netAmount,
       },
     });
 
+    this.scheduleExpiryHandler(tradeId, expiresAt);
+    this.tradeGateway.sendConfirmationNotification(tradeId, userId, trade.buyerId, releaseResult.txHash || '');
+    this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+      tradeId,
+      status: 'waiting_buyer_confirm',
+      message: `✅ تم تأكيد استلام المبلغ. تم تحرير USDT إلى محفظتك، يرجى تأكيد الاستلام.`,
+    });
+
+    await this.mailService.sendEmail({
+      to: trade.buyer.email,
+      subject: '🎉 تم تحرير USDT - يرجى تأكيد الاستلام - PalEscrow',
+      html: `<div dir="rtl"><h2>مرحباً ${trade.buyer.fullName}</h2>
+      <p>تم تحرير ${netAmount.toFixed(2)} USDT إلى محفظتك.</p>
+      <p>رقم المعاملة: ${releaseResult.txHash}</p>
+      <p>يرجى تأكيد استلام USDT خلال 10 دقائق لإتمام الصفقة.</p></div>`,
+    });
+
+    return { success: true, message: '✅ تم تأكيد استلام المبلغ. تم تحرير USDT إلى محفظتك، يرجى تأكيد الاستلام.', txHash: releaseResult.txHash };
+  }
+
+  async confirmBuyerReceipt(tradeId: string, userId: string) {
+    const trade = await this.prisma.trade.findFirst({
+      where: { id: tradeId, buyerId: userId, status: 'waiting_buyer_confirm' },
+      include: { buyer: true, seller: true, offer: true },
+    });
+
+    if (!trade) throw new NotFoundException('الصفقة غير موجودة');
+
+    if (trade.expiresAt && new Date(trade.expiresAt) < new Date()) {
+      throw new BadRequestException('انتهت المهلة!');
+    }
+
+    this.cancelExpiryTimeout(tradeId);
+
+    await this.prisma.trade.update({
+      where: { id: tradeId },
+      data: {
+        status: 'completed',
+        completedAt: new Date(),
+      },
+    });
+
+    // Update totalTrades for both users
     await this.prisma.user.update({
       where: { id: trade.sellerId },
       data: { totalTrades: { increment: 1 } },
     });
+    await this.updateSuccessRate(trade.sellerId);
 
     await this.prisma.user.update({
       where: { id: trade.buyerId },
       data: { totalTrades: { increment: 1 } },
     });
+    await this.updateSuccessRate(trade.buyerId);
 
+    // Update offer balances
     await this.prisma.offer.update({
       where: { id: trade.offerId },
       data: {
@@ -504,22 +552,25 @@ export class TradeService {
       },
     });
 
-this.tradeGateway.sendConfirmationNotification(tradeId, userId, trade.buyerId, releaseResult.txHash || '');
+    // Notifications
+    this.tradeGateway.sendToUser(trade.sellerId, 'trade:update', {
+      tradeId,
+      status: 'completed',
+      message: '🎉 أكد المشتري استلام USDT. الصفقة مكتملة!',
+    });
     this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
       tradeId,
       status: 'completed',
-      message: `✅ تم تأكيد استلام المبلغ وتحرير USDT إلى محفظتك`,
+      message: '🎉 تم تأكيد استلام USDT. الصفقة مكتملة!',
     });
 
     await this.mailService.sendEmail({
       to: trade.buyer.email,
-      subject: '🎉 تم تحرير USDT - PalEscrow',
-      html: `<div dir="rtl"><h2>مرحباً ${trade.buyer.fullName}</h2>
-      <p>تم تحرير ${netAmount.toFixed(2)} USDT إلى محفظتك.</p>
-      <p>رقم المعاملة: ${releaseResult.txHash}</p></div>`,
+      subject: '🎉 الصفقة مكتملة - PalEscrow',
+      html: `<div dir="rtl"><h2>مرحباً ${trade.buyer.fullName}</h2><p>تم تأكيد استلام ${trade.amountUsdt} USDT. الصفقة مكتملة بنجاح.</p></div>`,
     });
 
-    return { success: true, message: 'تم تأكيد الدفع وإتمام الصفقة', txHash: releaseResult.txHash };
+    return { success: true, message: 'تم تأكيد استلام USDT. الصفقة مكتملة! 🎉' };
   }
 
   async cancelTrade(tradeId: string, userId: string) {
@@ -559,6 +610,7 @@ this.tradeGateway.sendConfirmationNotification(tradeId, userId, trade.buyerId, r
     });
     
     this.tradeGateway.sendDepositNotification(tradeId, trade.sellerId, trade.buyerId, Number(trade.amountUsdt), `MOCK_${Date.now()}`);
+    this.tradeGateway.sendTradeUpdate(tradeId, trade.sellerId, trade.buyerId, 'active');
     
     return { success: true, message: 'تم محاكاة الإيداع بنجاح' };
   }

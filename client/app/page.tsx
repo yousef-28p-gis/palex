@@ -6,39 +6,38 @@ import { Button } from '@/components/ui/Button';
 import { 
   Shield, Banknote, Scale, Users, TrendingUp, Clock, CheckCircle, 
   ArrowLeft, Sparkles, Rocket, Star, Wallet, Lock, Zap, Award, 
-  Globe, Headphones, Gem, LifeBuoy 
+  Globe, Gem, LifeBuoy 
 } from 'lucide-react';
-import { ratesApi } from '@/lib/api';
+
+interface PublicStats {
+  totalTraders: number;
+  totalTradersFormatted: string;
+  totalVolume: number;
+  totalVolumeFormatted: string;
+  avgCompletionTimeMinutes: number;
+  avgCompletionTimeFormatted: string;
+}
 
 export default function HomePage() {
-  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<PublicStats | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   useEffect(() => {
-    loadExchangeRate();
-  }, []);
-
-  const loadExchangeRate = async () => {
-    try {
-      const response = await ratesApi.getAllRates();
-      if (response.data?.data?.exchange) {
-        setExchangeRate(response.data.data.exchange.usdToIls);
-        setLastUpdated(new Date(response.data.data.exchange.lastUpdated).toLocaleDateString('ar'));
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/stats/public');
+        const result = await response.json();
+        if (result.success) {
+          setStats(result.data);
+        }
+      } catch (error) {
+        console.error('فشل تحميل الإحصائيات:', error);
+      } finally {
+        setIsStatsLoading(false);
       }
-    } catch (error) {
-      console.error('Exchange rate load failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const stats = [
-    { value: '500+', label: 'تاجر موثوق', icon: Users },
-    { value: '2M+', label: 'حجم تداول', icon: TrendingUp },
-    { value: '0%', label: 'احتيال', icon: Shield },
-    { value: '< دقيقة', label: 'متوسط الوقت', icon: Clock },
-  ];
+    };
+    fetchStats();
+  }, []);
 
   const features = [
     { icon: Shield, title: 'ضمان Escrow', description: 'USDT يتم حجزها في الضمان حتى تأكيد التحويل البنكي', color: '#2563eb' },
@@ -55,18 +54,25 @@ export default function HomePage() {
     { name: 'خالد محمود', role: 'تاجر معتمد', rating: 5, text: 'منصة موثوقة وآمنة. أنصح بها الجميع.', avatar: 'خ' },
   ];
 
+  // ✅ أرقام الإحصائيات (من API أو القيم الافتراضية)
+  const statsItems = stats ? [
+    { value: stats.totalTradersFormatted, label: 'تاجر موثوق', icon: Users },
+    { value: stats.totalVolumeFormatted, label: 'حجم تداول', icon: TrendingUp },
+    { value: '0%', label: 'احتيال', icon: Shield },
+    { value: stats.avgCompletionTimeFormatted, label: 'متوسط الوقت', icon: Clock },
+  ] : [
+    { value: 'جاري...', label: 'تاجر موثوق', icon: Users },
+    { value: 'جاري...', label: 'حجم تداول', icon: TrendingUp },
+    { value: '0%', label: 'احتيال', icon: Shield },
+    { value: 'جاري...', label: 'متوسط الوقت', icon: Clock },
+  ];
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
       <div className="relative min-h-[90vh] flex items-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900" />
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2232&auto=format')] bg-cover bg-center opacity-10 mix-blend-overlay" />
-        
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500 rounded-full blur-3xl opacity-20 animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500 rounded-full blur-3xl opacity-20 animate-pulse delay-1000" />
-          <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-500 rounded-full blur-3xl opacity-10 animate-pulse delay-500" />
-        </div>
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2232&auto=format')] bg-cover bg-center opacity-5" />
 
         <div className="container mx-auto px-4 relative z-10 py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -90,8 +96,8 @@ export default function HomePage() {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/register">
-                  <Button size="lg" className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                <Link href="/register" prefetch={false}>
+                  <Button size="lg" className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 shadow-lg hover:shadow-xl">
                     <Rocket className="w-5 h-5" />
                     ابدأ التداول الآن
                     <ArrowLeft className="w-4 h-4" />
@@ -113,11 +119,15 @@ export default function HomePage() {
                   <p className="text-blue-200 text-sm">انضم إلى آلاف المتداولين</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {stats.map((stat, idx) => (
+                  {statsItems.map((stat, idx) => (
                     <div key={idx} className="text-center p-3 rounded-xl bg-white/5">
                       <div className="flex items-center justify-center gap-1">
                         <stat.icon className="w-5 h-5 text-blue-400" />
-                        <span className="text-2xl font-bold text-white">{stat.value}</span>
+                        {isStatsLoading ? (
+                          <div className="w-16 h-7 bg-white/10 rounded animate-pulse" />
+                        ) : (
+                          <span className="text-2xl font-bold text-white">{stat.value}</span>
+                        )}
                       </div>
                       <div className="text-xs text-blue-200 mt-1">{stat.label}</div>
                     </div>
@@ -127,7 +137,7 @@ export default function HomePage() {
                   <div className="flex items-center justify-center gap-1 text-yellow-400">
                     {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
                   </div>
-                  <p className="text-white/70 text-xs mt-2">تقييم المستخدمين</p>
+                  <p className="text-white/70 text-xs mt-2">مجتمع موثوق من المتداولين</p>
                 </div>
               </div>
             </div>
@@ -156,10 +166,9 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.map((feature, idx) => (
-              <div key={idx} className="group relative bg-white/80 backdrop-blur-sm rounded-xl p-5 shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-blue-200">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-bl-2xl rounded-tr-xl opacity-0 group-hover:opacity-100 transition" />
+              <div key={idx} className="group relative bg-white/80 backdrop-blur-sm rounded-xl p-5 shadow-md hover:shadow-xl border border-gray-100 hover:border-blue-200">
                 <div className="relative z-10">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-transform group-hover:scale-110" style={{ backgroundColor: `${feature.color}15` }}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ backgroundColor: `${feature.color}15` }}>
                     <feature.icon className="w-5 h-5" style={{ color: feature.color }} />
                   </div>
                   <h3 className="text-md font-bold text-gray-800 mb-1.5">{feature.title}</h3>
@@ -186,7 +195,7 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((t, idx) => (
-              <div key={idx} className="bg-white rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300">
+              <div key={idx} className="bg-white rounded-xl p-5 shadow-md hover:shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-md">
                     {t.avatar}
@@ -207,19 +216,7 @@ export default function HomePage() {
       </div>
 
       {/* CTA Section */}
-      <div className="relative py-16 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900" />
-        <div className="absolute inset-0 opacity-10">
-          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
-
+      <div className="relative py-16 overflow-hidden bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900">
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-white/10 backdrop-blur rounded-xl mb-5 shadow-lg">
@@ -231,7 +228,7 @@ export default function HomePage() {
             </h2>
             
             <p className="text-md text-blue-100 mb-4">
-              انضم إلى أكثر من <span className="font-bold text-white">2,000 متداول</span> يثقون بمنصتنا
+              انضم إلى أكثر من <span className="font-bold text-white">{stats ? stats.totalTradersFormatted : 'جاري...'}</span> يثقون بمنصتنا
             </p>
 
             <div className="flex flex-wrap justify-center gap-4 mb-6">
@@ -254,8 +251,8 @@ export default function HomePage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/register">
-                <Button size="md" className="bg-white text-blue-700 hover:bg-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 font-bold px-6">
+              <Link href="/register" prefetch={false}>
+                <Button size="md" className="bg-white text-blue-700 hover:bg-gray-100 shadow-lg hover:shadow-xl font-bold px-6">
                   إنشاء حساب مجاني
                   <ArrowLeft className="w-3.5 h-3.5" />
                 </Button>

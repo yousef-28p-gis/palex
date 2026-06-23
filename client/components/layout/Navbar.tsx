@@ -18,12 +18,11 @@ const publicLinks = [
 const privateLinks = [
   { href: '/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
   { href: '/trades', label: 'صفقاتي', icon: ListOrdered },
-  { href: '/trades/pending-deposit', label: 'انتظار إيداعي', icon: Clock },
   { href: '/disputes', label: 'النزاعات', icon: AlertTriangle },
 ];
 
 export function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -122,7 +121,18 @@ export function Navbar() {
 
           {/* Right Side - User Menu */}
           <div className="flex items-center gap-3 shrink-0">
-            {isLoggedIn ? (
+            {isLoading ? (
+              <div className="flex gap-2">
+                <Link href="/login" prefetch={false}>
+                  <button className="px-4 py-2 text-gray-300 hover:text-white font-medium">دخول</button>
+                </Link>
+                <Link href="/register" prefetch={false}>
+                  <button className="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:shadow-lg transition shadow-md">
+                    إنشاء حساب
+                  </button>
+                </Link>
+              </div>
+            ) : isLoggedIn ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => !isSuspended && setIsProfileOpen(!isProfileOpen)}
@@ -214,10 +224,10 @@ export function Navbar() {
               </div>
             ) : (
               <div className="flex gap-2">
-                <Link href="/login">
+                <Link href="/login" prefetch={false}>
                   <button className="px-4 py-2 text-gray-300 hover:text-white font-medium">دخول</button>
                 </Link>
-                <Link href="/register">
+                <Link href="/register" prefetch={false}>
                   <button className="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:shadow-lg transition shadow-md">
                     إنشاء حساب
                   </button>
@@ -233,7 +243,7 @@ export function Navbar() {
         </div>
 
         {/* Mobile Menu */}
-        {isOpen && (
+        {isOpen && !isLoading && (
           <div className="md:hidden py-4 border-t border-white/10">
             {navLinks.map((link) => (
               <Link
@@ -272,8 +282,8 @@ export function Navbar() {
             )}
             {!isLoggedIn && (
               <div className="mt-3 pt-3 border-t border-white/10">
-                <Link href="/login" onClick={() => setIsOpen(false)} className="block px-4 py-3 text-center text-gray-300 hover:bg-white/10 rounded-xl">دخول</Link>
-                <Link href="/register" onClick={() => setIsOpen(false)} className="block mt-2 px-4 py-3 text-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">إنشاء حساب</Link>
+                <Link href="/login" prefetch={false} onClick={() => setIsOpen(false)} className="block px-4 py-3 text-center text-gray-300 hover:bg-white/10 rounded-xl">دخول</Link>
+                <Link href="/register" prefetch={false} onClick={() => setIsOpen(false)} className="block mt-2 px-4 py-3 text-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">إنشاء حساب</Link>
               </div>
             )}
           </div>

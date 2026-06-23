@@ -1,22 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffers } from '@/hooks/useOffers';
-import { offersApi } from '@/lib/api';
-import { fetchRatesWithCache, getCachedRates } from '@/lib/rateCache';
-import { Button } from '@/components/ui';
+import { offersApi, tradesApi } from '@/lib/api';
+import { fetchRatesWithCache } from '@/lib/rateCache';
+import { Button, ConfirmModal } from '@/components/ui';
 import { Search, Filter, Loader2, TrendingUp, Plus, Shield, ShoppingBag, RefreshCw, AlertTriangle, Trash2 } from 'lucide-react';
 import CreateOfferModal from '@/components/marketplace/CreateOfferModal';
-import { useTradeWebSocket } from '@/hooks/useTradeWebSocket';
 import { useSoundNotification } from '@/components/ui/SoundNotification';
-import { getSocket, initializeSocket } from '@/lib/socket';
 import { OnlineIndicator } from '@/components/ui/OnlineIndicator';
 import { usePresence } from '@/hooks/usePresence';
 import toast from 'react-hot-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 
 // ✅ تبويبات الصفحة
 type TabType = 'buy' | 'myOffers';
@@ -40,26 +37,26 @@ function MarketplaceContent() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [page, setPage] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isWaitingForSeller, setIsWaitingForSeller] = useState(false);
-  const [pendingTrade, setPendingTrade] = useState<any>(null);
-  const [countdown, setCountdown] = useState(0);
-  const [isLoadingAction, setIsLoadingAction] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
+  const [buyingOfferId, setBuyingOfferId] = useState<string | null>(null);
   
   // ✅ حالات عروضي (my-offers)
   const [myOffers, setMyOffers] = useState<any[]>([]);
   const [isLoadingMyOffers, setIsLoadingMyOffers] = useState(false);
   const [deletingOfferId, setDeletingOfferId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{isOpen: boolean; offerId: string | null}>({isOpen: false, offerId: null});
   
-  // ✅ حالة توفر البائعين
-  const [sellerAvailability, setSellerAvailability] = useState<Record<string, boolean>>({});
+  // ✅ روابط الصفقات النشطة للبائع (أيقونة الواتساب)
+  const [activeTradeLinks, setActiveTradeLinks] = useState<Record<string, string>>({});
   
-  const [networkFees, setNetworkFees] = useState<{ trc20: number; bep20: number }>({ trc20: 1.5, bep20: 0.5 });
+  const [networkFees, setNetworkFees] = useState<{ trc20: number; bep20: number }>({ trc20: 2.5, bep20: 0.5 });
   const [feesLoading, setFeesLoading] = useState(true);
-  const [feesError, setFeesError] = useState(false);
+  
+  // ✅ عدد إجمالي الصفقات النشطة (للزر العائم)
+  const activeTradeCount = Object.keys(activeTradeLinks).length;
 
-  // WebSocket للإشعارات
-  const { pendingTrade: wsPendingTrade, isWaitingForSeller: wsIsWaiting, requestConfirmation, confirmPresence } = useTradeWebSocket();
-  const { showNotification, NotificationComponent, clearNotification } = useSoundNotification();
+  // ✅ إشعارات صوتية
+  const { showNotification, NotificationComponent } = useSoundNotification();
 
   // ✅ جلب عروضي (my-offers)
   const loadMyOffers = async () => {
@@ -75,94 +72,51 @@ function MarketplaceContent() {
     }
   };
 
-  // ✅ التحقق من توفر البائع
-  const checkSellerAvailability = async (sellerId: string): Promise<boolean> => {
-    if (sellerAvailability[sellerId] !== undefined) {
-      return sellerAvailability[sellerId];
-    }
-    
-    try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`http://localhost:4000/api/users/${sellerId}/presence`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      const isAvailable = data.isOnline === true;
-      setSellerAvailability(prev => ({ ...prev, [sellerId]: isAvailable }));
-      return isAvailable;
-    } catch (error) {
-      console.error('Failed to check seller availability:', error);
-      return false;
-    }
-  };
-
-  // ✅ تحميل العروض عند التبديل إلى تبويب "عروضي"
+  // ✅ التحقق من حالة المستخدم (تسجيل الدخول / KYC)
   useEffect(() => {
     if (activeTab === 'myOffers' && isAuthenticated) {
       loadMyOffers();
     }
   }, [activeTab, isAuthenticated]);
 
-  // تحديث حالة انتظار البائع
-  useEffect(() => {
-    if (wsPendingTrade) {
-      setPendingTrade(wsPendingTrade);
-      setIsWaitingForSeller(true);
-      setCountdown(wsPendingTrade.timeLeft || 600);
-    }
-  }, [wsPendingTrade]);
-
-  useEffect(() => {
-    if (!isWaitingForSeller || !pendingTrade) return;
-    
-    const interval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setIsWaitingForSeller(false);
-          setPendingTrade(null);
-          showNotification('error', 'انتهت المهلة، لم يؤكد البائع وجوده', '⏰ انتهت المهلة');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [isWaitingForSeller, pendingTrade, showNotification]);
-
-  // ✅ تحميل الأسعار من الكاش (بدلاً من API مباشر)
+  // ✅ تحميل رسوم الشبكة
   useEffect(() => {
     const loadFees = async () => {
+      setFeesLoading(true);
+      const ratesData = await fetchRatesWithCache();
+      setNetworkFees({
+        trc20: ratesData.fees.trc20.fee,
+        bep20: ratesData.fees.bep20.fee,
+      });
+      setFeesLoading(false);
+    };
+    loadFees();
+  }, []);
+
+  // ✅ جلب روابط الصفقات النشطة للبائع
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+    
+    const loadActiveTradeLinks = async () => {
       try {
-        setFeesLoading(true);
-        setFeesError(false);
-        
-        // ✅ استخدام الكاش أولاً (بدلاً من طلب API مباشر)
-        const ratesData = await fetchRatesWithCache();
-        
-        if (ratesData) {
-          setNetworkFees({
-            trc20: ratesData.fees.trc20.fee,
-            bep20: ratesData.fees.bep20.fee,
-          });
-          console.log('✅ Fees loaded from cache:', ratesData.fees);
-        } else {
-          throw new Error('No rates data available');
-        }
+        const { data: trades } = await offersApi.getMyActiveTradeLinks();
+        const links: Record<string, string> = {};
+        (Array.isArray(trades) ? trades : []).forEach((t: any) => {
+          if (t.offerId && t.id) {
+            links[t.offerId] = t.id;
+          }
+        });
+        setActiveTradeLinks(links);
       } catch (error) {
-        console.error('Failed to load network fees:', error);
-        setFeesError(true);
-        toast.error('فشل تحميل رسوم الشبكة، سيتم استخدام القيم الافتراضية مؤقتاً');
-        // قيم افتراضية في حالة الفشل التام
-        setNetworkFees({ trc20: 1.5, bep20: 0.5 });
-      } finally {
-        setFeesLoading(false);
+        console.warn('Failed to load active trade links:', error);
       }
     };
     
-    loadFees();
-  }, []);
+    loadActiveTradeLinks();
+    // تحديث كل 30 ثانية
+    const interval = setInterval(loadActiveTradeLinks, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, user?.id]);
 
   const { data: ilsData, isLoading: ilsLoading, refetch: ilsRefetch } = useOffers({
     fiatCurrency: 'ils',
@@ -250,11 +204,18 @@ function MarketplaceContent() {
   };
 
   // ✅ حذف عرض (لتبويب عروضي)
-  const handleDeleteOffer = async (offerId: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا العرض؟ لا يمكن التراجع عن هذا الإجراء.')) {
-      return;
-    }
-    
+  const handleDeleteOffer = (offerId: string) => {
+    setConfirmDelete({isOpen: true, offerId});
+  };
+
+  const closeConfirmDelete = () => {
+    setConfirmDelete({isOpen: false, offerId: null});
+  };
+
+  const handleDeleteConfirmed = async () => {
+    const offerId = confirmDelete.offerId;
+    if (!offerId) return;
+    closeConfirmDelete();
     setDeletingOfferId(offerId);
     try {
       await offersApi.delete(offerId);
@@ -268,103 +229,139 @@ function MarketplaceContent() {
     }
   };
 
-  // ✅ دالة شراء USDT مع التحقق من توفر البائع
+  // ✅ شراء مباشر — إنشاء صفقة فوراً
   const handleBuyClick = async (offerId: string) => {
     const offer = offers.find(o => o.id === offerId);
     if (!offer) {
       toast.error('العرض غير موجود');
       return;
     }
-    
+
+    // 🛑 منع البائع من شراء طلبه الخاص
+    if (user && offer.seller?.id === user.id) {
+      toast.error('لا يمكنك شراء طلب البيع الخاص بك');
+      return;
+    }
+
     const buyStatus = canBuy();
     if (buyStatus === 'not_logged_in') {
       toast.error('يرجى تسجيل الدخول أولاً');
       router.push(`/login?redirect=/marketplace&offerId=${offerId}`);
       return;
     }
-    
     if (buyStatus === 'kyc_required') {
       toast.error('يرجى إكمال توثيق الهوية أولاً');
       router.push('/kyc');
       return;
     }
-    
-    // ✅ التحقق من توفر البائع
-    setIsLoadingAction(true);
-    const isAvailable = await checkSellerAvailability(offer.seller?.id);
-    setIsLoadingAction(false);
-    
-    if (!isAvailable) {
+
+    // ✅ التحقق من وجود محفظة للمشتري تناسب شبكة العرض
+    if (offer.network === 'bep20' && !user?.bscWallet) {
+      setIsBuying(false);
+      setBuyingOfferId(null);
       toast.custom((t) => (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 shadow-lg max-w-md">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-lg max-w-md" dir="rtl">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-            <div>
-              <p className="font-semibold text-yellow-800">⚠️ البائع غير متوفر حالياً</p>
-              <p className="text-sm text-yellow-700 mt-1">
-                البائع ليس ضمن ساعات العمل أو غير متصل.
-                يمكنك المحاولة خلال ساعات العمل المحددة.
+            <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-red-800">⚠️ محفظة غير موجودة</p>
+              <p className="text-sm text-red-700 mt-1">
+                هذا العرض يستخدم شبكة BSC (BEP20). يجب إضافة محفظة BSC (BEP20) أولاً
+                لاستلام USDT على شبكة BEP20.
               </p>
-              <button
-                onClick={() => toast.dismiss(t.id)}
-                className="mt-2 text-sm text-yellow-800 font-medium hover:underline"
-              >
-                إغلاق
-              </button>
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => { toast.dismiss(t.id); router.push('/profile'); }} className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-lg font-semibold hover:bg-red-700 transition">
+                  🏦 الذهاب للمحفظة
+                </button>
+                <button onClick={() => toast.dismiss(t.id)} className="px-3 py-2 bg-red-100 text-red-800 text-sm rounded-lg font-semibold hover:bg-red-200 transition">
+                  إغلاق
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      ), { duration: 5000 });
+      ), { duration: 10000 });
       return;
     }
-    
-    // ✅ طلب إدخال المبلغ من المستخدم
+    if (offer.network === 'trc20' && !user?.trc20Wallet) {
+      setIsBuying(false);
+      setBuyingOfferId(null);
+      toast.custom((t) => (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-lg max-w-md" dir="rtl">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-red-800">⚠️ محفظة غير موجودة</p>
+              <p className="text-sm text-red-700 mt-1">
+                هذا العرض يستخدم شبكة TRC20. يجب إضافة محفظة TRC20 أولاً
+                لاستلام USDT على شبكة TRC20.
+              </p>
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => { toast.dismiss(t.id); router.push('/profile'); }} className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-lg font-semibold hover:bg-red-700 transition">
+                  🏦 الذهاب للمحفظة
+                </button>
+                <button onClick={() => toast.dismiss(t.id)} className="px-3 py-2 bg-red-100 text-red-800 text-sm rounded-lg font-semibold hover:bg-red-200 transition">
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ), { duration: 10000 });
+      return;
+    }
+
+    // ✅ إظهار الـ loading فوراً عند الضغط على زر شراء
+    setIsBuying(true);
+    setBuyingOfferId(offerId);
+
+    // ✅ طلب المبلغ
     const userAmount = prompt(
       `أدخل المبلغ المطلوب شراؤه (USDT)\nالحد الأدنى: ${offer.minAmount}\nالحد الأقصى: ${offer.maxAmount}`,
       offer.minAmount.toString()
     );
-    
-    if (!userAmount) return;
-    
+    if (!userAmount) {
+      setIsBuying(false);
+      setBuyingOfferId(null);
+      return;
+    }
+
     const amountNum = parseFloat(userAmount);
-    if (isNaN(amountNum)) {
-      toast.error('يرجى إدخال رقم صحيح');
+    if (isNaN(amountNum) || amountNum < offer.minAmount || amountNum > offer.maxAmount) {
+      if (isNaN(amountNum)) toast.error('يرجى إدخال رقم صحيح');
+      else if (amountNum < offer.minAmount) toast.error(`الحد الأدنى للشراء هو ${offer.minAmount} USDT`);
+      else toast.error(`الحد الأقصى للشراء هو ${offer.maxAmount} USDT`);
+      setIsBuying(false);
+      setBuyingOfferId(null);
       return;
     }
+
+    // ✅ إنشاء الصفقة مباشرة مع إظهار loading أحسن
+    setIsBuying(true);
+    setBuyingOfferId(offerId);
     
-    if (amountNum < offer.minAmount) {
-      toast.error(`الحد الأدنى للشراء هو ${offer.minAmount} USDT`);
-      return;
-    }
-    
-    if (amountNum > offer.maxAmount) {
-      toast.error(`الحد الأقصى للشراء هو ${offer.maxAmount} USDT`);
-      return;
-    }
-    
-    // ✅ التحقق من WebSocket
-    const socket = getSocket();
-    if (!socket || !socket.connected) {
-      toast.error('جاري الاتصال بالخادم، يرجى المحاولة مرة أخرى بعد ثوانٍ');
-      const token = localStorage.getItem('accessToken');
-      if (token) {
-        initializeSocket(token);
-        setTimeout(() => {
-          toast.success('تم إعادة الاتصال، يرجى المحاولة مرة أخرى');
-        }, 1000);
-      }
-      return;
-    }
-    
-    setIsLoadingAction(true);
     try {
-      await requestConfirmation(offerId, amountNum);
-      showNotification('pending', 'جاري البحث عن البائع لتأكيد وجوده...', '⏳ انتظار البائع', true);
+      const response = await tradesApi.start({ offerId, amountUsdt: amountNum });
+      const tradeData = response.data.trade;
+      
+      if (!tradeData || !tradeData.id) {
+        throw new Error('لم يتم استلام بيانات الصفقة');
+      }
+      
+      // ✅ التوجيه فوراً
+      router.push(`/trades/${tradeData.id}`);
+      
+      // ✅ إشعار بعد التوجيه
+      setTimeout(() => {
+        toast.success('تم فتح الصفقة بنجاح 🎉');
+      }, 100);
     } catch (error: any) {
-      console.error('Request confirmation error:', error);
-      toast.error(error?.message || 'فشل في طلب تأكيد البائع');
+      const message = error.response?.data?.message || error.message || 'فشل إنشاء الصفقة';
+      toast.error(message, { duration: 6000 });
+      console.warn('Trade create error:', message);
     } finally {
-      setIsLoadingAction(false);
+      setIsBuying(false);
+      setBuyingOfferId(null);
     }
   };
 
@@ -395,36 +392,14 @@ function MarketplaceContent() {
   // ✅ دالة تحديث الأسعار يدوياً
   const handleRefreshRates = async () => {
     setFeesLoading(true);
-    try {
-      const ratesData = await fetchRatesWithCache(true);
-      if (ratesData) {
-        setNetworkFees({
-          trc20: ratesData.fees.trc20.fee,
-          bep20: ratesData.fees.bep20.fee,
-        });
-        toast.success('تم تحديث الأسعار بنجاح');
-      }
-    } catch (error) {
-      toast.error('فشل تحديث الأسعار');
-    } finally {
-      setFeesLoading(false);
-    }
+    const ratesData = await fetchRatesWithCache(true);
+    setNetworkFees({
+      trc20: ratesData.fees.trc20.fee,
+      bep20: ratesData.fees.bep20.fee,
+    });
+    toast.success('تم تحديث الأسعار بنجاح');
+    setFeesLoading(false);
   };
-
-  if (feesError && !feesLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 text-center border border-white/20 max-w-md">
-          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-          <p className="text-white mb-2">فشل تحميل رسوم الشبكة</p>
-          <p className="text-blue-200 text-sm mb-4">يرجى التحقق من اتصال الخادم</p>
-          <button onClick={handleRefreshRates} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-            إعادة المحاولة
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading || feesLoading) {
     return (
@@ -437,36 +412,6 @@ function MarketplaceContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       {NotificationComponent}
-      
-      {isWaitingForSeller && pendingTrade && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 max-w-md w-full mx-4 overflow-hidden">
-            <div className="p-6 text-center">
-              <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
-              </div>
-              <h2 className="text-xl font-bold text-white mb-2">جاري البحث عن البائع</h2>
-              <p className="text-blue-200 text-sm mb-4">
-                ننتظر تأكيد البائع لوجوده...
-              </p>
-              <div className="text-2xl font-bold text-yellow-400 mb-4">
-                {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}
-              </div>
-              <p className="text-blue-300 text-xs">
-                سيتم إلغاء الطلب تلقائياً إذا لم يؤكد البائع وجوده خلال 10 دقائق
-              </p>
-              {user?.role !== 'user' && (
-                <button
-                  onClick={() => confirmPresence(pendingTrade.pendingId, pendingTrade.offerId)}
-                  className="mt-4 px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition"
-                >
-                  أنا موجود (للبائع)
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* ✅ تبويبات الصفحة */}
@@ -577,6 +522,7 @@ function MarketplaceContent() {
                   const premiumPercent = offer.premiumPercent || 0;
                   const isPremiumPositive = premiumPercent > 0;
                   const isPremiumNegative = premiumPercent < 0;
+                  const isThisBuying = isBuying && buyingOfferId === offer.id;
                   
                   return (
                     <div key={offer.id} className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden hover:bg-white/15 transition hover:border-blue-500/50">
@@ -587,7 +533,7 @@ function MarketplaceContent() {
                               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md overflow-hidden">
                                 {offer.seller?.profileImageUrl ? (
                                   <img 
-                                    src={`http://localhost:4000${offer.seller.profileImageUrl}`} 
+                                    src={`/api${offer.seller.profileImageUrl}`} 
                                     alt={offer.seller?.fullName}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
@@ -610,8 +556,25 @@ function MarketplaceContent() {
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-semibold text-white text-base">{offer.seller?.fullName || 'بائع'}</span>
-                                  {/* ✅ أيقونة النشاط */}
                                   <OnlineIndicator userId={offer.seller?.id} size="sm" showTooltip={true} />
+                                  {/* ✅ أيقونة الواتساب للصفقات النشطة */}
+                                  {user?.id && offer.sellerId === user.id && activeTradeLinks[offer.id] && (
+                                    <a
+                                      href={`/trades/${activeTradeLinks[offer.id]}`}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        router.push(`/trades/${activeTradeLinks[offer.id]}`);
+                                      }}
+                                      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30 transition cursor-pointer"
+                                      title="فتح الصفقة"
+                                    >
+                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12.072 2.007c-5.512 0-10 4.488-10 10 0 1.774.463 3.44 1.274 4.904L2.03 21.562a.417.417 0 00.515.515l4.647-1.31a9.94 9.94 0 004.88 1.24c5.513 0 10-4.488 10-10s-4.487-10-10-10zm0 18.583a8.574 8.574 0 01-4.468-1.28.416.416 0 00-.347-.05l-3.42.965 1.024-3.336a.416.416 0 00-.048-.36A8.55 8.55 0 013.49 12.007c0-4.74 3.842-8.584 8.582-8.584s8.584 3.844 8.584 8.584-3.844 8.583-8.584 8.583z"/>
+                                        <path d="M17.644 14.22c-.284-.14-1.673-.826-1.93-.922-.258-.095-.447-.142-.635.142-.188.285-.73.922-.894 1.11-.163.19-.327.214-.61.072-.283-.143-1.196-.44-2.277-1.406-.843-.753-1.41-1.68-1.575-1.964-.164-.284-.018-.438.124-.58.128-.127.285-.332.427-.498.142-.166.19-.284.285-.475.094-.19.047-.358-.024-.5-.07-.143-.635-1.53-.87-2.096-.23-.562-.462-.458-.635-.468-.163-.01-.35-.01-.537-.01-.188 0-.49.07-.746.354-.258.285-.983.96-.983 2.343 0 1.383 1.007 2.72 1.148 2.908.14.19 1.983 3.026 4.803 4.244.672.292 1.196.466 1.605.618.673.25 1.286.214 1.77.13.54-.094 1.673-.684 1.91-1.346.236-.662.236-1.23.165-1.348-.07-.12-.258-.19-.542-.332z"/>
+                                      </svg>
+                                      صفقة
+                                    </a>
+                                  )}
                                   {offer.seller?.kycStatus === 'approved' && (
                                     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-300 border border-green-500/30">
                                       <Shield className="w-3 h-3" /> موثق
@@ -630,6 +593,13 @@ function MarketplaceContent() {
                                     </div>
                                   )}
                                 </div>
+                                {/* ساعات العمل */}
+                                {offer.seller?.workHoursStart && offer.seller?.workHoursEnd && (
+                                  <div className="flex items-center gap-1 mt-1 text-xs text-blue-300">
+                                    <span>⏰</span>
+                                    <span>{offer.seller.workHoursStart} - {offer.seller.workHoursEnd}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -681,10 +651,14 @@ function MarketplaceContent() {
                         <div className="mt-4">
                           <button 
                             onClick={() => handleBuyClick(offer.id)} 
-                            disabled={isLoadingAction}
+                            disabled={isBuying}
                             className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
                           >
-                            {isLoadingAction ? <Loader2 className="w-4 h-4 animate-spin" /> : 'شراء USDT'}
+                            {isThisBuying ? (
+                              <><Loader2 className="w-4 h-4 animate-spin" /> جاري فتح الصفقة...</>
+                            ) : (
+                              'شراء USDT'
+                            )}
                           </button>
                         </div>
                       </div>
@@ -777,6 +751,20 @@ function MarketplaceContent() {
                           </div>
                         </div>
                         <div className="flex gap-2">
+                          {/* ✅ أيقونة الصفقة النشطة */}
+                          {activeTradeLinks[offer.id] && (
+                            <button
+                              onClick={() => router.push(`/trades/${activeTradeLinks[offer.id]}`)}
+                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition flex items-center gap-2"
+                              title="فتح الصفقة"
+                            >
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12.072 2.007c-5.512 0-10 4.488-10 10 0 1.774.463 3.44 1.274 4.904L2.03 21.562a.417.417 0 00.515.515l4.647-1.31a9.94 9.94 0 004.88 1.24c5.513 0 10-4.488 10-10s-4.487-10-10-10zm0 18.583a8.574 8.574 0 01-4.468-1.28.416.416 0 00-.347-.05l-3.42.965 1.024-3.336a.416.416 0 00-.048-.36A8.55 8.55 0 013.49 12.007c0-4.74 3.842-8.584 8.582-8.584s8.584 3.844 8.584 8.584-3.844 8.583-8.584 8.583z"/>
+                                <path d="M17.644 14.22c-.284-.14-1.673-.826-1.93-.922-.258-.095-.447-.142-.635.142-.188.285-.73.922-.894 1.11-.163.19-.327.214-.61.072-.283-.143-1.196-.44-2.277-1.406-.843-.753-1.41-1.68-1.575-1.964-.164-.284-.018-.438.124-.58.128-.127.285-.332.427-.498.142-.166.19-.284.285-.475.094-.19.047-.358-.024-.5-.07-.143-.635-1.53-.87-2.096-.23-.562-.462-.458-.635-.468-.163-.01-.35-.01-.537-.01-.188 0-.49.07-.746.354-.258.285-.983.96-.983 2.343 0 1.383 1.007 2.72 1.148 2.908.14.19 1.983 3.026 4.803 4.244.672.292 1.196.466 1.605.618.673.25 1.286.214 1.77.13.54-.094 1.673-.684 1.91-1.346.236-.662.236-1.23.165-1.348-.07-.12-.258-.19-.542-.332z"/>
+                              </svg>
+                              صفقة
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDeleteOffer(offer.id)}
                             disabled={deletingOfferId === offer.id}
@@ -807,10 +795,33 @@ function MarketplaceContent() {
           loadMyOffers();
         }
       }} />
+
+      <ConfirmModal
+        isOpen={confirmDelete.isOpen}
+        onClose={closeConfirmDelete}
+        onConfirm={handleDeleteConfirmed}
+        title="🗑️ حذف العرض"
+        message="هل أنت متأكد من حذف هذا العرض؟"
+        consequences={['سيتم حذف العرض نهائياً', 'لا يمكن التراجع عن هذا الإجراء', 'إذا كان هناك صفقات نشطة على هذا العرض، فلن يتم حذفه']}
+        confirmText="نعم، حذف العرض"
+        cancelText="إلغاء"
+        variant="danger"
+        isLoading={deletingOfferId !== null}
+      />
+
+      {/* ✅ زر الصفقات النشطة - مُنقل إلى layout.tsx ليكون فوق زر الواتساب */}
     </div>
   );
 }
 
 export default function MarketplacePage() {
-  return <MarketplaceContent />;
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <MarketplaceContent />
+    </Suspense>
+  );
 }

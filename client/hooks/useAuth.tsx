@@ -33,6 +33,7 @@ interface AuthContextType {
   register: (data: RegisterData, redirectTo?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
+  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to fetch user:', error);
       if (error.response?.status === 401) {
         localStorage.removeItem('accessToken');
+        document.cookie = 'accessToken=; path=/; max-age=0';
         setUser(null);
       }
       if (error.response?.status === 403) {
@@ -121,15 +123,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       localStorage.setItem('accessToken', accessToken);
+      document.cookie = `accessToken=${accessToken}; path=/; max-age=900; SameSite=Lax`;
       setUser(userData);
-      
+
       toast.success('تم تسجيل الدخول بنجاح');
-      
+
       const targetPath = redirectTo || '/dashboard';
       router.push(targetPath);
     } catch (error: any) {
-      const message = error.response?.data?.message || 'فشل تسجيل الدخول';
-      toast.error(message, { duration: 5000 });
+      // ✅ نعيد رمي الخطأ عشان صفحة Login تمسكه وتعرضه في الصندوق الأحمر الثابت
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -140,8 +143,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authApi.register(data);
       const { accessToken, user: userData } = response.data;
-      
+
       localStorage.setItem('accessToken', accessToken);
+      document.cookie = `accessToken=${accessToken}; path=/; max-age=900; SameSite=Lax`;
       setUser(userData);
       
       toast.success('تم إنشاء الحساب بنجاح');
@@ -164,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // تجاهل الخطأ
     }
     localStorage.removeItem('accessToken');
+    document.cookie = 'accessToken=; path=/; max-age=0';
     setUser(null);
     toast.success('تم تسجيل الخروج');
     router.push('/');
@@ -181,10 +186,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user, 
         isLoading, 
         isAuthenticated, 
-        login, 
-        register, 
-        logout, 
+        login,
+        register,
+        logout,
         updateUser,
+        refreshUser: fetchUser,
       }}
     >
       {children}

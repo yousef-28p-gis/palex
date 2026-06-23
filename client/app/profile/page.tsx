@@ -4,12 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { userApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { 
   User, Mail, Phone, Wallet, Shield, 
   Copy, Check, Eye, EyeOff, LogOut, Save, 
   Star, TrendingUp, Calendar, Globe, Fingerprint, Bell,
-  Loader2, CheckCircle, AlertTriangle, Camera, Upload, X, Clock
+  Loader2, CheckCircle, AlertTriangle, AlertCircle, Camera, Upload, X, Clock
 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -43,6 +44,7 @@ function ProfileContent() {
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [showLogoutAllConfirm, setShowLogoutAllConfirm] = useState(false);
 
   // ساعات العمل
   const [workHours, setWorkHours] = useState({
@@ -159,7 +161,7 @@ function ProfileContent() {
   const loadWorkHours = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch('http://localhost:4000/api/users/work-hours', {
+      const res = await fetch('/api/users/work-hours', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -218,7 +220,7 @@ function ProfileContent() {
     
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:4000/api/users/profile-image', {
+      const response = await fetch('/api/users/profile-image', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -252,7 +254,7 @@ function ProfileContent() {
     
     try {
       const token = localStorage.getItem('accessToken');
-      await fetch('http://localhost:4000/api/users/profile-image', {
+      await fetch('/api/users/profile-image', {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -284,7 +286,11 @@ function ProfileContent() {
     
     setIsLoading(true);
     try {
-      await userApi.updateWallets(userData.trc20Wallet || null, userData.bscWallet || null);
+      // ✅ إرسال فقط المحافظ غير الفارغة
+      const walletData: any = {};
+      if (userData.trc20Wallet?.trim()) walletData.trc20Wallet = userData.trc20Wallet.trim();
+      if (userData.bscWallet?.trim()) walletData.bscWallet = userData.bscWallet.trim();
+      await userApi.updateWallets(walletData);
       
       let successMessage = 'تم تحديث المحافظ';
       if (userData.trc20Wallet && !userData.bscWallet) {
@@ -334,7 +340,7 @@ function ProfileContent() {
     setIsSavingHours(true);
     try {
       const token = localStorage.getItem('accessToken');
-      await fetch('http://localhost:4000/api/users/work-hours', {
+      await fetch('/api/users/work-hours', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -374,14 +380,17 @@ function ProfileContent() {
   };
 
   const logoutAllSessions = async () => {
-    if (confirm('هل أنت متأكد من تسجيل الخروج من جميع الأجهزة؟')) {
-      try {
-        await userApi.logoutAllSessions();
-        loadSessions();
-        toast.success('تم تسجيل الخروج من جميع الأجهزة');
-      } catch (error) {
-        toast.error('فشل في تسجيل الخروج');
-      }
+    setShowLogoutAllConfirm(true);
+  };
+
+  const handleLogoutAllConfirmed = async () => {
+    setShowLogoutAllConfirm(false);
+    try {
+      await userApi.logoutAllSessions();
+      loadSessions();
+      toast.success('تم تسجيل الخروج من جميع الأجهزة');
+    } catch (error) {
+      toast.error('فشل في تسجيل الخروج');
     }
   };
 
@@ -886,6 +895,16 @@ function ProfileContent() {
           </div>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={showLogoutAllConfirm}
+        onClose={() => setShowLogoutAllConfirm(false)}
+        onConfirm={handleLogoutAllConfirmed}
+        title="🔐 تسجيل الخروج من جميع الأجهزة"
+        message="هل أنت متأكد من تسجيل الخروج من جميع الأجهزة؟"
+        consequences={['سيتم تسجيل الخروج من جميع الأجهزة المتصلة', 'ستحتاج إلى تسجيل الدخول مرة أخرى']}
+        confirmText="نعم، تسجيل الخروج"
+        variant="danger"
+      />
     </div>
   );
 }

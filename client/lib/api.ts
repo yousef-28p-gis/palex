@@ -36,6 +36,9 @@ const isRetryableError = (error: any): boolean => {
   return RETRY_CONFIG.retryableStatuses.includes(error.response.status);
 };
 
+// ✅ متغير عام يمنع عرض رسالة انتهاء الجلسة أكثر من مرة
+let sessionExpiredNotified = false;
+
 // ✅ معالج الردود مع إعادة المحاولة
 api.interceptors.response.use(
   (response) => response,
@@ -69,38 +72,53 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
     
-    // ✅ معالجة أخطاء 401 (انتهت صلاحية التوكن)
+    // ✅ معالجة أخطاء 401 (انتهت صلاحية التوكن) — نتجاهلها في صفحة الدخول والتسجيل
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+      // 🛑 إذا ما في توكن بالأساس (المستخدم مش مسجل)، نمرر الخطأ بدون محاولة refresh
+      const hasToken = !!localStorage.getItem('accessToken');
+      if (!hasToken) {
+        return Promise.reject(error);
+      }
       
+      // 🛑 إذا كان الطلب الأصلي للدخول أو التسجيل، نمرر الخطأ مباشرة
+      const authEndpoints = ['/auth/login', '/auth/register'];
+      const isAuthEndpoint = authEndpoints.some(endpoint => 
+        originalRequest.url?.includes(endpoint)
+      );
+      if (isAuthEndpoint) {
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+
       try {
-        // ✅ محاولة تجديد التوكن
-        const refreshToken = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('refreshToken='))
-          ?.split('=')[1];
-        
-        if (!refreshToken) {
-          throw new Error('No refresh token');
-        }
-        
+        // ✅ httpOnly cookie يرسلها المتصفح تلقائياً مع withCredentials
         const response = await axios.post(
           `${API_BASE_URL}/auth/refresh`,
-          { refreshToken },
+          {},
           { withCredentials: true }
         );
-        
+
         const newAccessToken = response.data.accessToken;
         localStorage.setItem('accessToken', newAccessToken);
+        document.cookie = `accessToken=${newAccessToken}; path=/; max-age=900; SameSite=Lax`;
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        
+
         // ✅ استخدام axios مباشرة لتجنب الحلقات
         return axios(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem('accessToken');
-        toast.error('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
+        if (!sessionExpiredNotified) {
+          sessionExpiredNotified = true;
+          localStorage.removeItem('accessToken');
+          document.cookie = 'accessToken=; path=/; max-age=0';
+          setTimeout(() => {
+            toast.error('⌛ انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.', { duration: 5000 });
+          }, 300); // تأخير بسيط عشان نشوف التوست قبل التحويل
+          if (!window.location.pathname.includes('/login')) {
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 1500); // انتظار 1.5 ثانية عشان المستخدم يشوف الرسالة
+          }
         }
         return Promise.reject(refreshError);
       }
@@ -167,6 +185,7 @@ export const authApi = {
     const response = await api.post('/auth/login', data);
     if (response.data.accessToken) {
       localStorage.setItem('accessToken', response.data.accessToken);
+      document.cookie = `accessToken=${response.data.accessToken}; path=/; max-age=900; SameSite=Lax`;
     }
     return response;
   },
@@ -217,7 +236,7 @@ export const adminApi = {
 export const userApi = {
   getProfile: () => api.get('/users/profile'),
   updateProfile: (data: { fullName: string; phone: string; governorate?: string }) => api.put('/users/profile', data),
-  updateWallets: (trc20Wallet: string, bscWallet: string) => api.post('/users/wallets', { trc20Wallet, bscWallet }),
+  updateWallets: (data: { trc20Wallet?: string; bscWallet?: string }) => api.post('/users/wallets', data),
   changePassword: (data: { currentPassword: string; newPassword: string }) => api.post('/users/change-password', data),
   getSessions: () => api.get('/users/sessions'),
   logoutSession: (sessionId: string) => api.post(`/users/sessions/${sessionId}/logout`),
@@ -226,6 +245,7 @@ export const userApi = {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   deleteProfileImage: () => api.delete('/users/profile-image'),
+  getPresence: (userId: string) => api.get(`/users/${userId}/presence`),
   // ✅ دوال ساعات العمل
   getWorkHours: () => api.get('/users/work-hours'),
   updateWorkHours: (data: { workHoursStart: string; workHoursEnd: string; workDays: number[] }) => 
@@ -240,6 +260,7 @@ export const offersApi = {
   create: (data: CreateOfferData) => api.post('/offers', data),
   update: (id: string, data: UpdateOfferData) => api.put(`/offers/${id}`, data),
   delete: (id: string) => api.delete(`/offers/${id}`),
+  getMyActiveTradeLinks: () => api.get('/offers/my/trade-links'),
 };
 
 // ============ Trade API ============
@@ -249,9 +270,11 @@ export const tradesApi = {
   getUserTrades: (params?: { page?: number; status?: string; limit?: number }) => api.get('/trades/user', { params }),
   submitProof: (id: string, data: SubmitProofData) => api.post(`/trades/${id}/payment-proof`, data),
   confirmPayment: (id: string) => api.post(`/trades/${id}/confirm-payment`),
+  confirmReceipt: (id: string) => api.post(`/trades/${id}/confirm-receipt`),
   cancel: (id: string) => api.post(`/trades/${id}/cancel`),
-  requestSellerConfirmation: (offerId: string, amount: number) => api.post('/trades/request-confirmation', { offerId, amount }),
-  confirmSellerPresence: (pendingId: string, offerId: string) => api.post('/trades/confirm-presence', { pendingId, offerId }),
+  approve: (id: string) => api.post(`/trades/${id}/approve`),
+  reject: (id: string) => api.post(`/trades/${id}/reject`),
+  mockDeposit: (id: string) => api.post(`/trades/${id}/mock-deposit`),
 };
 
 // ============ Dispute API ============
@@ -265,6 +288,13 @@ export const disputesApi = {
 // ============ Blockchain API ============
 export const blockchainApi = {
   getNetworkFee: (network: string) => api.get(`/blockchain/fee/${network}`),
+};
+
+// ============ Reviews API ============
+export const reviewsApi = {
+  create: (data: { tradeId: string; rating: number; comment?: string }) => api.post('/reviews', data),
+  getUserReviews: (userId: string, page?: number) => api.get(`/reviews/user/${userId}`, { params: { page } }),
+  getTradeReview: (tradeId: string) => api.get(`/reviews/trade/${tradeId}`),
 };
 
 // ============ Rates API ============
@@ -364,7 +394,6 @@ export interface StartTradeData {
 export interface SubmitProofData {
   imageUrl: string;
   transactionRef: string;
-  transferTime: string;
   bankName: string;
   last4Digits: string;
 }

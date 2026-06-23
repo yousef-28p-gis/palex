@@ -9,13 +9,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { StartTradeDto } from './dto/start-trade.dto';
 import { SubmitPaymentProofDto } from './dto/submit-payment-proof.dto';
-import { PrismaService } from '../../shared/services/prisma.service'; // ✅ تمت الإضافة
 
 @Controller('trades')
 export class TradeController {
   constructor(
     private tradeService: TradeService,
-    private prisma: PrismaService, // ✅ تمت الإضافة
   ) {}
 
   @Post()
@@ -24,7 +22,7 @@ export class TradeController {
     return this.tradeService.startTrade(userId, startTradeDto);
   }
 
-  @SkipThrottle()
+  @SkipThrottle({ strict: true, normal: true, public: true })
   @Get('user')
   @UseGuards(JwtAuthGuard)
   async getUserTrades(
@@ -36,12 +34,14 @@ export class TradeController {
     return this.tradeService.getUserTrades(userId, +page, +limit, status);
   }
 
+  @SkipThrottle({ strict: true, normal: true, public: true })
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getTradeById(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.tradeService.getTradeById(id, userId);
   }
 
+  @SkipThrottle({ strict: true, normal: true, public: true })
   @Post(':id/payment-proof')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('image', {
@@ -79,40 +79,17 @@ export class TradeController {
     return this.tradeService.confirmPayment(id, userId);
   }
 
+  @SkipThrottle({ strict: true, normal: true, public: true })
+  @Post(':id/confirm-receipt')
+  @UseGuards(JwtAuthGuard)
+  async confirmBuyerReceipt(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.tradeService.confirmBuyerReceipt(id, userId);
+  }
+
   @Post(':id/cancel')
   @UseGuards(JwtAuthGuard)
   async cancelTrade(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.tradeService.cancelTrade(id, userId);
-  }
-
-  // ✅ مرحلة ما قبل الصفقة - طلب تأكيد البائع
-  @Post('request-confirmation')
-  @UseGuards(JwtAuthGuard)
-  async requestSellerConfirmation(
-    @CurrentUser('id') userId: string,
-    @Body() body: { offerId: string; amount: number },
-  ) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    return this.tradeService.requestSellerConfirmation(
-      body.offerId,
-      body.amount,
-      userId,
-      user?.fullName || 'مشتري',
-    );
-  }
-
-  // ✅ البائع يؤكد وجوده
-  @Post('confirm-presence')
-  @UseGuards(JwtAuthGuard)
-  async confirmSellerPresence(
-    @CurrentUser('id') userId: string,
-    @Body() body: { pendingId: string; offerId: string },
-  ) {
-    return this.tradeService.confirmSellerPresence(
-      body.pendingId,
-      body.offerId,
-      userId,
-    );
   }
 
   @Post(':id/mock-deposit')
@@ -123,5 +100,17 @@ export class TradeController {
   @Post(':id/mock-release')
   async mockRelease(@Param('id') id: string, @Body() body: { buyerAddress: string }) {
     return this.tradeService.mockRelease(id, 'mock-user', body.buyerAddress);
+  }
+
+  @Post(':id/approve')
+  @UseGuards(JwtAuthGuard)
+  async approveTrade(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.tradeService.sellerApproveTrade(id, userId);
+  }
+
+  @Post(':id/reject')
+  @UseGuards(JwtAuthGuard)
+  async rejectTrade(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.tradeService.sellerRejectTrade(id, userId);
   }
 }

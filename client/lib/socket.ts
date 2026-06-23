@@ -2,21 +2,32 @@ import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
 let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
-export const initializeSocket = (token: string) => {
+export const initializeSocket = () => {
+  // ✅ إذا في socket متصل — نرجعه
   if (socket?.connected) {
-    console.log('🔌 WebSocket already connected');
     return socket;
   }
+  
+  // ✅ إذا في socket بس مش متصل — نمسكه وننشئ جديد
+  if (socket) {
+    socket.removeAllListeners();
+    socket.disconnect();
+    socket = null;
+  }
 
-  socket = io(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000', {
-    auth: { token },
-    transports: ['websocket'],
+  const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+  
+  socket = io(wsUrl ? `${wsUrl}/trades` : '/trades', {
+    // ✅ دالة auth تُستدعى في كل اتصال/إعادة اتصال — تقرأ التوكن الجديد من localStorage
+    auth: (cb: any) => cb({ token: localStorage.getItem('accessToken') }),
+    path: '/api/ws',
+    transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
+    reconnectionDelay: 2000,
+    reconnectionDelayMax: 10000,
   });
 
   socket.on('connect', () => {
@@ -29,12 +40,25 @@ export const initializeSocket = (token: string) => {
   });
 
   socket.on('connect_error', (error) => {
-    console.error('WebSocket connection error:', error.message);
+    console.warn('🔌 WebSocket error (falling back to polling):', error.message);
     reconnectAttempts++;
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      console.error('Max reconnection attempts reached');
+      // ✅ بعد المحاولات الفاشلة — نجبر إعادة تحميل التوكن
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        // نطلب /auth/me عشان نجبر الـ interceptor على تجديد التوكن
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(() => {
+          reconnectAttempts = 0;
+        }).catch(() => {
+          reconnectAttempts = 0;
+        });
+      }
     }
   });
+
+  socket.on('error', () => {});
 
   return socket;
 };
@@ -51,35 +75,6 @@ export const disconnectSocket = () => {
 };
 
 // ==================== أحداث WebSocket ====================
-
-export const requestSellerConfirmation = (
-  offerId: string,
-  amount: number,
-  buyerId: string,
-  buyerName: string,
-): Promise<{ success: boolean; pendingId: string }> => {
-  return new Promise((resolve, reject) => {
-    const sock = getSocket();
-    if (!sock) {
-      reject(new Error('WebSocket not connected'));
-      return;
-    }
-    sock.emit('trade:request', { offerId, amount, buyerId, buyerName }, (response: any) => {
-      if (response?.success) {
-        resolve(response);
-      } else {
-        reject(new Error(response?.message || 'فشل في طلب تأكيد البائع'));
-      }
-    });
-  });
-};
-
-export const confirmSellerPresence = (pendingId: string, offerId: string, sellerId: string) => {
-  const sock = getSocket();
-  if (sock) {
-    sock.emit('trade:confirm', { pendingId, offerId, sellerId });
-  }
-};
 
 export const onTradeEvent = (callback: (data: any) => void) => {
   const sock = getSocket();
@@ -100,13 +95,23 @@ export const onTradeEvent = (callback: (data: any) => void) => {
     'user:presence',
   ];
   
+  // ✅ نخزّن الـ wrappers عشان نقدر نعمل off بعدين
+  const wrappers = new Map<string, (data: any) => void>();
+  
   events.forEach((event) => {
-    sock.on(event, callback);
+    const wrapper = (data: any) => {
+      callback({ ...data, _eventType: event });
+    };
+    wrappers.set(event, wrapper);
+    sock.on(event, wrapper);
   });
   
   return () => {
     events.forEach((event) => {
-      sock.off(event, callback);
+      const wrapper = wrappers.get(event);
+      if (wrapper) {
+        sock.off(event, wrapper);
+      }
     });
   };
 };

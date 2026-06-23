@@ -14,7 +14,7 @@ const getExchangeRate = async (): Promise<number> => {
   
   // إذا لم يوجد كاش، نجلب من API مباشرة
   try {
-    const response = await fetch('http://localhost:4000/api/rates/exchange');
+    const response = await fetch('/api/rates/exchange');
     const data = await response.json();
     return data.rate || 3.5;
   } catch (error) {
@@ -57,10 +57,10 @@ export function useOffers(filters: OfferFilters) {
         fees: responseData.fees || { trc20: 0, bep20: 0 },
       };
     },
-    staleTime: 5 * 60 * 1000,        // 5 دقائق
-    gcTime: 10 * 60 * 1000,          // 10 دقائق
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 60 * 1000,          // دقيقة واحدة — تحديث سريع للتقييمات
+    gcTime: 5 * 60 * 1000,         // 5 دقائق للـ GC (يحتفظ بالبيانات في الخلفية)
+    refetchOnWindowFocus: true,    // تحديث عند العودة للمتصفح
+    refetchOnMount: true,          // تحديث عند فتح الصفحة من البداية
     retry: 1,
   });
 }
@@ -73,9 +73,9 @@ export function useMyOffers() {
       const { data } = await offersApi.getMyOffers();
       return data;
     },
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 }
 

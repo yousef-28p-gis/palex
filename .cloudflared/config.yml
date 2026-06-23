@@ -1,0 +1,24 @@
+tunnel: palex-tunnel
+credentials-file: /data/palex/.cloudflared/credentials.json
+
+ingress:
+  # Backend API
+  - hostname: api.palex.yourdomain.com
+    service: http://localhost:4000
+    originRequest:
+      noTLSVerify: true
+
+  # WebSocket (same backend)
+  - hostname: ws.palex.yourdomain.com
+    service: http://localhost:4000
+    originRequest:
+      noTLSVerify: true
+
+  # Frontend
+  - hostname: palex.yourdomain.com
+    service: http://localhost:3000
+    originRequest:
+      noTLSVerify: true
+
+  # Fallback
+  - service: http_status:404

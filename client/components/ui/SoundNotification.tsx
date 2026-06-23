@@ -1,33 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-
-// ✅ أصوات حقيقية (base64 - أصوات قصيرة)
-const SOUNDS = {
-  deposit: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3',
-  proof: 'https://www.soundjay.com/misc/sounds/notification-3.mp3',
-  confirmed: 'https://www.soundjay.com/misc/sounds/notification-4.mp3',
-  pending: 'https://www.soundjay.com/misc/sounds/notification-1.mp3',
-  error: 'https://www.soundjay.com/misc/sounds/error-01.mp3',
-  success: 'https://www.soundjay.com/misc/sounds/notification-2.mp3',
-  online: 'https://www.soundjay.com/misc/sounds/notification-5.mp3',
-  offline: 'https://www.soundjay.com/misc/sounds/notification-6.mp3',
-};
-
-// ✅ أصوات احتياطية (في حال فشل تحميل الصوت من الرابط)
-const FALLBACK_SOUNDS = {
-  deposit: 'data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==',
-  proof: 'data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==',
-  confirmed: 'data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==',
-  pending: 'data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==',
-  error: 'data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==',
-  success: 'data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==',
-  online: 'data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==',
-  offline: 'data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==',
-};
+import { useState, useEffect } from 'react';
+import SoundManager from '@/lib/soundManager';
 
 interface SoundNotificationProps {
-  type: 'deposit' | 'proof' | 'confirmed' | 'pending' | 'error' | 'success' | 'online' | 'offline';
+  type: 'deposit' | 'proof' | 'confirmed' | 'pending' | 'error' | 'success' | 'online' | 'offline' | 'new_trade';
   message?: string;
   title?: string;
   onClose?: () => void;
@@ -36,17 +13,11 @@ interface SoundNotificationProps {
 
 export function SoundNotification({ type, message, title, onClose, playSound = true }: SoundNotificationProps) {
   const [show, setShow] = useState(true);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // ✅ تشغيل الصوت إذا كان مطلوباً
+    // ✅ تشغيل الصوت فوراً - محمل مسبقاً
     if (playSound) {
-      const soundUrl = SOUNDS[type] || FALLBACK_SOUNDS[type];
-      if (soundUrl) {
-        audioRef.current = new Audio(soundUrl);
-        audioRef.current.volume = 0.5;
-        audioRef.current.play().catch((e) => console.log('Audio play failed:', e));
-      }
+      SoundManager.play(type);
     }
 
     // ✅ عرض إشعار المتصفح
@@ -75,6 +46,7 @@ export function SoundNotification({ type, message, title, onClose, playSound = t
       case 'success': return 'bg-green-500/20 border-green-500/30';
       case 'online': return 'bg-green-500/20 border-green-500/30';
       case 'offline': return 'bg-gray-500/20 border-gray-500/30';
+      case 'new_trade': return 'bg-emerald-500/20 border-emerald-500/30';
       default: return 'bg-gray-500/20 border-gray-500/30';
     }
   };
@@ -89,6 +61,7 @@ export function SoundNotification({ type, message, title, onClose, playSound = t
       case 'success': return '🎉';
       case 'online': return '🟢';
       case 'offline': return '🔴';
+      case 'new_trade': return '🆕';
       default: return '🔔';
     }
   };

@@ -13,6 +13,9 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [termsError, setTermsError] = useState('');
+
   const [form, setForm] = useState({
     fullName: '',
     email: '',
@@ -122,6 +125,7 @@ export default function RegisterPage() {
     const phoneError = validatePhone(form.phone);
     const passwordError = validatePassword(form.password);
     const confirmError = validateConfirmPassword(form.password, form.confirmPassword);
+    const termsErr = !agreeToTerms ? 'يجب الموافقة على شروط الاستخدام وسياسة الخصوصية' : '';
     
     setErrors({
       fullName: fullNameError,
@@ -130,11 +134,12 @@ export default function RegisterPage() {
       password: passwordError,
       confirmPassword: confirmError,
     });
+    setTermsError(termsErr);
     
-    return !fullNameError && !emailError && !phoneError && !passwordError && !confirmError;
+    return !fullNameError && !emailError && !phoneError && !passwordError && !confirmError && !termsErr;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!isFormValid()) {
       toast.error('يرجى تصحيح الأخطاء في النموذج');
@@ -149,7 +154,7 @@ export default function RegisterPage() {
         phone: form.phone,
         password: form.password,
       });
-      router.push('/dashboard');
+      // ✅ register() في useAuth يتولى التوجيه تلقائياً
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'حدث خطأ غير متوقع');
     } finally {
@@ -195,7 +200,7 @@ export default function RegisterPage() {
                   <p className="text-blue-200">انضم إلى آلاف المتداولين الموثوقين</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-5">
                   <div className="grid md:grid-cols-2 gap-4">
                     {/* الاسم الكامل */}
                     <div>
@@ -313,19 +318,35 @@ export default function RegisterPage() {
                   </div>
 
                   {/* شروط الاستخدام */}
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" id="terms" className="w-4 h-4 rounded border-white/20 bg-white/10 checked:bg-blue-600" />
-                    <label htmlFor="terms" className="text-sm text-blue-200">
-                      أوافق على{' '}
-                      <a href="#" className="text-white hover:underline">شروط الاستخدام</a>
-                      {' '}و{' '}
-                      <a href="#" className="text-white hover:underline">سياسة الخصوصية</a>
-                    </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="terms"
+                        checked={agreeToTerms}
+                        onChange={(e) => {
+                          setAgreeToTerms(e.target.checked);
+                          if (e.target.checked) setTermsError('');
+                        }}
+                        className={`w-4 h-4 rounded border-white/20 bg-white/10 checked:bg-blue-600 ${
+                          termsError ? 'border-red-500' : ''
+                        }`}
+                      />
+                      <label htmlFor="terms" className="text-sm text-blue-200">
+                        أوافق على{' '}
+                        <a href="#" className="text-white hover:underline">شروط الاستخدام</a>
+                        {' '}و{' '}
+                        <a href="#" className="text-white hover:underline">سياسة الخصوصية</a>
+                        {' '}<span className="text-red-400">*</span>
+                      </label>
+                    </div>
+                    {termsError && <p className="text-sm text-red-400 mr-6">{termsError}</p>}
                   </div>
 
                   {/* زر التسجيل */}
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSubmit}
                     disabled={loading}
                     className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
                   >
@@ -342,11 +363,11 @@ export default function RegisterPage() {
                   {/* رابط تسجيل الدخول */}
                   <p className="text-center text-sm text-blue-200">
                     لديك حساب بالفعل؟{' '}
-                    <Link href="/login" className="text-white font-semibold hover:underline">
+                    <Link href="/login" prefetch={false} className="text-white font-semibold hover:underline">
                       تسجيل الدخول
                     </Link>
                   </p>
-                </form>
+                </div>
               </div>
             </div>
           </div>

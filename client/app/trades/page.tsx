@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { tradesApi } from '@/lib/api';
+import { onTradeEvent } from '@/lib/socket';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
@@ -84,6 +85,18 @@ function TradesContent() {
     loadTrades();
   }, [filter, page]);
 
+  // 🔄 التحديث التلقائي عبر WebSocket
+  useEffect(() => {
+    const unsubscribe = onTradeEvent((data) => {
+      const refreshEvents = ['trade:deposit', 'trade:proof', 'trade:confirmed', 'trade:update', 'trade:ready'];
+      if (refreshEvents.includes(data._eventType)) {
+        console.log(`🔄 Auto-refreshing trades list due to ${data._eventType}`);
+        loadTrades();
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   const loadTrades = async () => {
     setIsLoading(true);
     try {
@@ -115,8 +128,23 @@ function TradesContent() {
     }
   };
 
-  // ✅ فلترة إضافية للبحث
-  const filteredTrades = trades.filter(trade => {
+  // 🔄 التحديث التلقائي عبر WebSocket
+  const loadTradesRef = useRef(loadTrades);
+  loadTradesRef.current = loadTrades;
+  
+  useEffect(() => {
+    const unsubscribe = onTradeEvent((data) => {
+      const refreshEvents = ['trade:deposit', 'trade:proof', 'trade:confirmed', 'trade:update', 'trade:ready'];
+      if (refreshEvents.includes(data._eventType)) {
+        console.log(`🔄 Auto-refreshing trades list due to ${data._eventType}`);
+        loadTradesRef.current();
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    loadTrades();
     if (search && !trade.tradeReference?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -131,8 +159,65 @@ function TradesContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div className="container mx-auto px-4 py-6">
+          {/* ⏳ Skeleton - header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="space-y-2">
+              <div className="h-7 w-24 bg-white/10 rounded-lg animate-pulse" />
+              <div className="h-4 w-40 bg-white/5 rounded-lg animate-pulse" />
+            </div>
+            <div className="flex gap-3">
+              <div className="w-10 h-10 bg-white/10 rounded-xl animate-pulse" />
+              <div className="w-48 h-10 bg-white/10 rounded-xl animate-pulse" />
+            </div>
+          </div>
+
+          {/* ⏳ Skeleton - stats cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-4">
+                <div className="h-4 w-20 bg-white/10 rounded-lg animate-pulse mb-2" />
+                <div className="h-8 w-16 bg-white/10 rounded-lg animate-pulse" />
+              </div>
+            ))}
+          </div>
+
+          {/* ⏳ Skeleton - filters */}
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-2 mb-6">
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-9 w-24 bg-white/10 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          </div>
+
+          {/* ⏳ Skeleton - results */}
+          <div className="h-5 w-24 bg-white/10 rounded-lg animate-pulse mb-4" />
+
+          {/* ⏳ Skeleton - trade cards */}
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-5">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-5 w-28 bg-white/10 rounded-lg animate-pulse" />
+                      <div className="h-6 w-20 bg-white/10 rounded-full animate-pulse" />
+                      <div className="h-6 w-14 bg-white/10 rounded-full animate-pulse" />
+                    </div>
+                    <div className="flex flex-wrap gap-4">
+                      {[1, 2, 3, 4].map((j) => (
+                        <div key={j} className="h-4 w-24 bg-white/5 rounded-lg animate-pulse" />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="w-5 h-5 bg-white/10 rounded-lg animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

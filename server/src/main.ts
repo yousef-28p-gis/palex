@@ -1,5 +1,3 @@
-// ===== FILE: src/main.ts =====
-
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
@@ -25,7 +23,7 @@ async function bootstrap() {
   process.env.MASTER_BSC_PRIVATE_KEY = vault.getSecret('MASTER_BSC_PRIVATE_KEY') || '';
   process.env.TRON_API_KEY = vault.getSecret('TRON_API_KEY') || '';
   process.env.BSCSCAN_API_KEY = vault.getSecret('BSCSCAN_API_KEY') || '';
-  
+
   const frontendUrl = configService.get('FRONTEND_URL') || 'http://localhost:3000';
   const nodeEnv = configService.get('NODE_ENV') || 'development';
   const isProduction = nodeEnv === 'production';
@@ -86,7 +84,7 @@ async function bootstrap() {
         const skipPaths = [
           '/api/rates',
           '/api/auth/me',
-          '/api/trades/user',
+          '/api/trades',
           '/api/offers',
           '/api/health',
           '/api/wallet/stats',
@@ -112,6 +110,11 @@ async function bootstrap() {
       }
       
       if (!isProduction && origin.includes('localhost')) {
+        return callback(null, true);
+      }
+      
+      // ✅ السماح لأي نطاق trycloudflare.com (tunnels مؤقتة للـ dev)
+      if (!isProduction && /\.trycloudflare\.com$/.test(origin)) {
         return callback(null, true);
       }
       

@@ -24,6 +24,7 @@ function KycContent() {
   const { user, refreshUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(true); // ✅ التحميل الأولي
   
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
@@ -56,6 +57,27 @@ function KycContent() {
     { value: 'بنك مصر فلسطين', label: 'بنك مصر فلسطين' },
     { value: 'محفظة بال باي', label: 'محفظة بال باي' },
   ];
+
+  // ✅ جلب أحدث البيانات من السيرفر عند فتح الصفحة
+  useEffect(() => {
+    const loadFreshData = async () => {
+      try {
+        const freshUser = await refreshUser();
+        if (freshUser) {
+          setFormData(prev => ({
+            ...prev,
+            fullName: freshUser.fullName || prev.fullName,
+            phone: freshUser.phone || prev.phone,
+          }));
+        }
+      } catch (err) {
+        console.error('فشل تحديث البيانات:', err);
+      } finally {
+        setIsRefreshing(false);
+      }
+    };
+    loadFreshData();
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -192,6 +214,15 @@ function KycContent() {
       setIsResetting(false);
     }
   };
+
+  // حالة تحميل - جلب أحدث البيانات
+  if (isRefreshing) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   // حالة انتظار
   if (user?.kycStatus === 'pending') {

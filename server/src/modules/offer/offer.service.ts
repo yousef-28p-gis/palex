@@ -54,6 +54,11 @@ export class OfferService {
             trustLevel: true,
             kycStatus: true,
             profileImageUrl: true,
+            workHoursStart: true,
+            workHoursEnd: true,
+            workDays: true,
+            isActiveNow: true,
+            lastSeenAt: true,
           },
         },
       },
@@ -127,6 +132,11 @@ export class OfferService {
             totalTrades: true,
             trustLevel: true,
             kycStatus: true,
+            workHoursStart: true,
+            workHoursEnd: true,
+            workDays: true,
+            isActiveNow: true,
+            lastSeenAt: true,
           },
         },
       },
@@ -280,5 +290,26 @@ export class OfferService {
     this.logger.log(`✅ Offer deleted: ${id} by user ${userId}`);
     
     return { success: true, message: 'تم حذف العرض بنجاح' };
+  }
+
+  // ✅ روابط الصفقات النشطة للبائع (أيقونة الواتساب)
+  async getActiveTradeLinksForSeller(userId: string) {
+    const activeStatuses = ['waiting_seller_deposit', 'waiting_buyer_payment', 'pending_confirmation'];
+    
+    const trades = await this.prisma.trade.findMany({
+      where: {
+        sellerId: userId,
+        status: { in: activeStatuses },
+      },
+      select: {
+        id: true,
+        offerId: true,
+        status: true,
+        tradeReference: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    return trades;
   }
 }

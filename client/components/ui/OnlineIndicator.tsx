@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Tooltip } from './Tooltip';
+import { userApi } from '@/lib/api';
+import { getSocket, initializeSocket } from '@/lib/socket';
 
 interface OnlineIndicatorProps {
   userId: string;
@@ -16,19 +18,31 @@ export function OnlineIndicator({ userId, showTooltip = true, size = 'sm' }: Onl
   const [tooltipText, setTooltipText] = useState('');
 
   useEffect(() => {
+    // ✅ 1. جلب الحالة الحالية فوراً
     fetchPresence();
-    const interval = setInterval(fetchPresence, 30000); // تحديث كل 30 ثانية
-    return () => clearInterval(interval);
+
+    // ✅ 2. استماع WebSocket للتحديثات الفورية
+    const socket = initializeSocket();
+    socket.on('user:presence', (data: { userId: string; isActive: boolean; timestamp: string }) => {
+      if (data.userId === userId) {
+        setIsOnline(data.isActive);
+        setTooltipText(data.isActive ? '🟢 نشط الآن' : '🔴 غير متصل');
+      }
+    });
+
+    // تحديث كل 30 ثانية كنسخ احتياطي
+    const interval = setInterval(fetchPresence, 30000);
+
+    return () => {
+      clearInterval(interval);
+      socket.off('user:presence');
+    };
   }, [userId]);
 
   const fetchPresence = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/api/users/${userId}/presence`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-      const data = await res.json();
+      const { data } = await userApi.getPresence(userId);
+      
       setIsOnline(data.isOnline);
       setLastSeen(data.lastSeenAt);
       
@@ -44,11 +58,12 @@ export function OnlineIndicator({ userId, showTooltip = true, size = 'sm' }: Onl
           setTooltipText(`🟡 آخر ظهور: ${lastSeenDate.toLocaleTimeString('ar')}`);
         }
       } else {
-        setTooltipText('⚫ غير متصل');
+        setTooltipText('🔴 غير متصل');
       }
     } catch (error) {
-      console.error('Failed to fetch presence:', error);
-      setTooltipText('⚫ غير متصل');
+      console.warn('Failed to fetch presence:', error);
+      setTooltipText('🔴 غير متصل');
+      setIsOnline(false);
     } finally {
       setIsLoading(false);
     }
@@ -64,9 +79,12 @@ export function OnlineIndicator({ userId, showTooltip = true, size = 'sm' }: Onl
     <div className="relative">
       <div
         className={`${sizeClasses[size]} rounded-full ${
-          isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+          isOnline ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-500'
         }`}
       />
+      {isLoading && (
+        <div className="absolute inset-0 rounded-full bg-gray-800 animate-pulse" />
+      )}
     </div>
   );
 

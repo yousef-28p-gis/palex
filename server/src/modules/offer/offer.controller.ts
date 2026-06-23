@@ -25,6 +25,12 @@ export class OfferController {
     return this.offerService.getMyOffers(userId);
   }
 
+  @Get('my/trade-links')
+  @UseGuards(JwtAuthGuard)
+  async getMyActiveTradeLinks(@CurrentUser('id') userId: string) {
+    return this.offerService.getActiveTradeLinksForSeller(userId);
+  }
+
   @SkipThrottle()
   @Get(':id')
   async getOfferById(@Param('id') id: string) {

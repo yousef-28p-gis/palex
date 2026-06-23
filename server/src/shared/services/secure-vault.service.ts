@@ -111,10 +111,10 @@ export class SecureVaultService implements OnModuleInit {
     
     this.logger.log('✅ Secure vault created with encrypted secrets');
     
-    // ✅ حذف المفاتيح من الذاكرة المؤقتة فوراً
-    setTimeout(() => {
-      this.clearEnvSecrets();
-    }, 100);
+    // ✅ تخزين المفاتيح في الكاش
+    for (const [key, value] of Object.entries(secrets)) {
+      this.secretsCache.set(key, value);
+    }
   }
 
   private async loadCacheFromVault() {

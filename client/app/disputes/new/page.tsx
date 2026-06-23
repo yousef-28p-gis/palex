@@ -11,12 +11,11 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 const disputeReasons = [
-  { value: 'no_usdt_received', label: 'لم أستلم USDT بعد الدفع' },
   { value: 'no_payment_received', label: 'لم أستلم التحويل البنكي' },
   { value: 'fake_payment_proof', label: 'إثبات دفع مزور (مشتبه به)' },
   { value: 'wrong_amount', label: 'المبلغ المحول غير صحيح' },
-  { value: 'delay', label: 'تأخير شديد من الطرف الآخر' },
-  { value: 'other', label: 'أخرى' },
+  { value: 'pending_transfer', label: 'الحوالة معلقة (تحت المراجعة)' },
+  { value: 'wrong_recipient', label: 'المستلم خطأ' },
 ];
 
 function NewDisputeContent() {

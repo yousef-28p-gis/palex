@@ -50,16 +50,16 @@ export class DisputeService {
     if (!trade) {
       throw new NotFoundException('الصفقة غير موجودة');
     }
-    
-    if (trade.status === 'completed') {
-      throw new BadRequestException('لا يمكن فتح نزاع على صفقة مكتملة');
-    }
-    
-    if (trade.status === 'cancelled') {
-      throw new BadRequestException('لا يمكن فتح نزاع على صفقة ملغاة');
+
+    if (trade.status !== 'waiting_seller_confirmation') {
+      throw new BadRequestException('يمكن فتح نزاع فقط في مرحلة تأكيد البائع');
     }
 
-    const existingDispute = await this.prisma.dispute.findUnique({ 
+    if (trade.sellerId !== userId) {
+      throw new ForbiddenException('فقط البائع يمكنه فتح نزاع');
+    }
+
+    const existingDispute = await this.prisma.dispute.findUnique({
       where: { tradeId: dto.tradeId } 
     });
     

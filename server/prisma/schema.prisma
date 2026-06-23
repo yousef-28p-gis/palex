@@ -76,7 +76,7 @@ model User {
 
 model RefreshToken {
   id         String   @id @default(uuid())
-  token      String   @unique
+  token      String   @unique @db.VarChar(512)
   userId     String   @map("user_id")
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt  DateTime @map("expires_at")
@@ -177,10 +177,10 @@ model Trade {
   completedAt         DateTime? @map("completed_at")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
-    escrowPrivateKey     String?   @map("escrow_private_key")
+    escrowPrivateKey     String?   @map("escrow_private_key") @db.Text
   escrowDerivationPath String?   @map("escrow_derivation_path")
   bscEscrowAddress      String?  @map("bsc_escrow_address")
-  bscEscrowPrivateKey   String?  @map("bsc_escrow_private_key")
+  bscEscrowPrivateKey   String?  @map("bsc_escrow_private_key") @db.Text
   depositNetwork        String?  @map("deposit_network") // 'trc20' or 'bep20'
 
   paymentProof        PaymentProof?
@@ -300,7 +300,7 @@ model ExchangeRate {
 
 model PasswordResetToken {
   id        String   @id @default(uuid())
-  token     String   @unique
+  token     String   @unique @db.VarChar(512)
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime @map("expires_at")
