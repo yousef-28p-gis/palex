@@ -27,14 +27,6 @@ function DashboardContent() {
     totalVolume: 0,
     pendingTrades: 0,
   });
-  const [trustLevel, setTrustLevel] = useState({
-    currentLevel: 'مستجد',
-    nextLevel: 'موثوق',
-    tradesToNextLevel: 50,
-    currentTrades: 0,
-  });
-  
-  // ✅ منع التحميل المزدوج
   const initialLoadDone = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isAuthRefreshing, setIsAuthRefreshing] = useState(true);
@@ -104,30 +96,6 @@ function DashboardContent() {
       const totalVolume = completedTrades.reduce((sum: number, t: any) => sum + Number(t.amountUsdt), 0);
       
       const completedCount = userData.totalTrades || completedTrades.length;
-      let currentLevel = 'مستجد';
-      let nextLevel = 'موثوق';
-      let tradesToNextLevel = 50;
-      
-      if (completedCount >= 200) {
-        currentLevel = 'تاجر نخبة';
-        nextLevel = 'لا يوجد';
-        tradesToNextLevel = 0;
-      } else if (completedCount >= 100) {
-        currentLevel = 'تاجر محترف';
-        nextLevel = 'تاجر نخبة';
-        tradesToNextLevel = 200 - completedCount;
-      } else if (completedCount >= 50) {
-        currentLevel = 'موثوق';
-        nextLevel = 'تاجر محترف';
-        tradesToNextLevel = 100 - completedCount;
-      }
-      
-      setTrustLevel({
-        currentLevel,
-        nextLevel,
-        tradesToNextLevel: Math.max(0, tradesToNextLevel),
-        currentTrades: completedCount,
-      });
       
       setStats({
         totalTrades: userData.totalTrades || completedTrades.length,
@@ -232,231 +200,235 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-8 border border-white/20">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">مرحباً {firstName}! 👋</h1>
-              <p className="text-blue-200 text-sm">
-                لديك {stats.pendingTrades} صفقة قيد التنفيذ
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+
+        {/* ===== الهيدر ===== */}
+        <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-8 border border-white/20">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">مرحباً {firstName}! 👋</h1>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-blue-200 text-xs sm:text-sm">لديك {stats.pendingTrades} صفقة قيد التنفيذ</span>
                 {user?.kycStatus === 'approved' && (
-                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-300 mr-2">
-                    <CheckCircle className="w-3 h-3" /> موثق
+                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-green-500/20 text-green-300">
+                    <CheckCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> موثق
                   </span>
                 )}
                 {user?.kycStatus === 'pending' && (
-                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 mr-2">
-                    <Clock className="w-3 h-3" /> قيد التوثيق
+                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300">
+                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> قيد التوثيق
                   </span>
                 )}
                 {user?.kycStatus === 'none' && (
-                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-300 mr-2">
-                    <Shield className="w-3 h-3" /> غير موثق
+                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-300">
+                    <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> غير موثق
                   </span>
                 )}
-              </p>
+              </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => loadDashboardData()}
-                className="p-2 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition"
+                className="p-2 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition shrink-0"
                 title="تحديث"
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
                 onClick={handleStartTrade}
-                className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition shadow-lg flex items-center gap-2 justify-center"
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition shadow-lg flex items-center gap-2 justify-center text-sm sm:text-base"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 ابدأ صفقة جديدة
               </button>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                <ArrowLeftRight className="w-6 h-6 text-blue-400" />
+        {/* ===== إحصائيات ===== */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-5 mb-4 sm:mb-8">
+          <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-white/20">
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-3">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 bg-blue-500/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                <ArrowLeftRight className="w-4 h-4 sm:w-6 sm:h-6 text-blue-400" />
               </div>
+              <p className="text-blue-200 text-[10px] sm:text-sm">إجمالي الصفقات</p>
             </div>
-            <p className="text-blue-200 text-sm mb-1">إجمالي الصفقات</p>
-            <p className="text-2xl font-bold text-white">{stats.totalTrades}</p>
+            <p className="text-lg sm:text-2xl font-bold text-white">{stats.totalTrades}</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-green-400" />
+          <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-white/20">
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-3">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 bg-green-500/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6 text-green-400" />
               </div>
+              <p className="text-blue-200 text-[10px] sm:text-sm">نسبة النجاح</p>
             </div>
-            <p className="text-blue-200 text-sm mb-1">نسبة النجاح</p>
-            <p className="text-2xl font-bold text-white">{stats.successRate}%</p>
+            <p className="text-lg sm:text-2xl font-bold text-white">{stats.successRate}%</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center">
-                <Star className="w-6 h-6 text-yellow-400" />
+          <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-white/20">
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-3">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 bg-yellow-500/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                <Star className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-400" />
               </div>
+              <p className="text-blue-200 text-[10px] sm:text-sm">التقييم</p>
             </div>
-            <p className="text-blue-200 text-sm mb-1">التقييم</p>
-            <p className="text-2xl font-bold text-white">{stats.averageRating}</p>
+            <p className="text-lg sm:text-2xl font-bold text-white">{stats.averageRating}</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-purple-400" />
+          <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-white/20">
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-3">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 bg-purple-500/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                <DollarSign className="w-4 h-4 sm:w-6 sm:h-6 text-purple-400" />
               </div>
+              <p className="text-blue-200 text-[10px] sm:text-sm">حجم التداول</p>
             </div>
-            <p className="text-blue-200 text-sm mb-1">حجم التداول</p>
-            <p className="text-2xl font-bold text-white">{stats.totalVolume} USDT</p>
+            <p className="text-lg sm:text-2xl font-bold text-white">{stats.totalVolume} USDT</p>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
-            <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-yellow-400" />
-              مستوى الثقة
-            </h3>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 bg-yellow-500/20 rounded-xl flex items-center justify-center">
-                <Shield className="w-7 h-7 text-yellow-400" />
-              </div>
-              <div>
-                <p className="text-xl font-bold text-white">{trustLevel.currentLevel}</p>
-                <p className="text-sm text-blue-200">
-                  {trustLevel.tradesToNextLevel > 0 
-                    ? `${trustLevel.tradesToNextLevel} صفقة للترقية إلى ${trustLevel.nextLevel}`
-                    : 'أنت في أعلى مستوى'}
-                </p>
-              </div>
+        {/* ===== إحصائيات سريعة + إجراءات ===== */}
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-6 mb-4 sm:mb-8">
+          <div className="flex-1 bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="font-semibold text-white text-sm sm:text-base">إحصائيات سريعة</h3>
+              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-300" />
             </div>
-            {trustLevel.tradesToNextLevel > 0 && (
-              <>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full" 
-                    style={{ width: `${(trustLevel.currentTrades / (trustLevel.currentTrades + trustLevel.tradesToNextLevel)) * 100}%` }} 
-                  />
-                </div>
-                <p className="text-xs text-blue-200 mt-2">{trustLevel.currentTrades}/{trustLevel.currentTrades + trustLevel.tradesToNextLevel} صفقة</p>
-              </>
-            )}
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-white">إحصائيات سريعة</h3>
-              <Activity className="w-4 h-4 text-blue-300" />
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                <span className="text-blue-200 text-sm">صفقات قيد التنفيذ</span>
-                <span className="font-semibold text-white">{stats.pendingTrades}</span>
+            <div className="space-y-2 sm:space-y-3">
+              <div className="flex justify-between items-center border-b border-white/10 pb-1.5 sm:pb-2">
+                <span className="text-blue-200 text-xs sm:text-sm">صفقات قيد التنفيذ</span>
+                <span className="font-semibold text-white text-xs sm:text-sm">{stats.pendingTrades}</span>
               </div>
-              <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                <span className="text-blue-200 text-sm">نسبة الإكمال</span>
-                <span className="font-semibold text-green-400">{stats.successRate}%</span>
+              <div className="flex justify-between items-center border-b border-white/10 pb-1.5 sm:pb-2">
+                <span className="text-blue-200 text-xs sm:text-sm">نسبة الإكمال</span>
+                <span className="font-semibold text-green-400 text-xs sm:text-sm">{stats.successRate}%</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-blue-200 text-sm">متوسط التقييم</span>
+                <span className="text-blue-200 text-xs sm:text-sm">متوسط التقييم</span>
                 <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-semibold text-white">{stats.averageRating}</span>
+                  <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400" />
+                  <span className="font-semibold text-white text-xs sm:text-sm">{stats.averageRating}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
-            <h3 className="font-semibold text-white mb-4">إجراءات سريعة</h3>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="flex-1 bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20">
+            <h3 className="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">إجراءات سريعة</h3>
+            <div className="grid grid-cols-4 sm:grid-cols-2 gap-2 sm:gap-3">
               <Link href="/marketplace">
-                <div className="p-3 bg-blue-500/20 rounded-xl text-center hover:bg-blue-500/30 transition cursor-pointer">
-                  <ShoppingBag className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                  <p className="text-xs text-white">شراء USDT</p>
+                <div className="p-2 sm:p-3 bg-blue-500/20 rounded-xl text-center hover:bg-blue-500/30 transition cursor-pointer min-h-[68px] sm:min-h-[88px] flex flex-col items-center justify-center">
+                  <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 mx-auto mb-0.5 sm:mb-1" />
+                  <p className="text-[10px] sm:text-xs text-white">شراء USDT</p>
                 </div>
               </Link>
               <Link href="/trades">
-                <div className="p-3 bg-green-500/20 rounded-xl text-center hover:bg-green-500/30 transition cursor-pointer">
-                  <ArrowLeftRight className="w-5 h-5 text-green-400 mx-auto mb-1" />
-                  <p className="text-xs text-white">صفقاتي</p>
+                <div className="p-2 sm:p-3 bg-green-500/20 rounded-xl text-center hover:bg-green-500/30 transition cursor-pointer min-h-[68px] sm:min-h-[88px] flex flex-col items-center justify-center">
+                  <ArrowLeftRight className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 mx-auto mb-0.5 sm:mb-1" />
+                  <p className="text-[10px] sm:text-xs text-white">صفقاتي</p>
                 </div>
               </Link>
               <Link href="/kyc">
-                <div className="p-3 bg-purple-500/20 rounded-xl text-center hover:bg-purple-500/30 transition cursor-pointer">
-                  <Shield className="w-5 h-5 text-purple-400 mx-auto mb-1" />
-                  <p className="text-xs text-white">توثيق الهوية</p>
+                <div className="p-2 sm:p-3 bg-purple-500/20 rounded-xl text-center hover:bg-purple-500/30 transition cursor-pointer min-h-[68px] sm:min-h-[88px] flex flex-col items-center justify-center">
+                  <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 mx-auto mb-0.5 sm:mb-1" />
+                  <p className="text-[10px] sm:text-xs text-white">توثيق الهوية</p>
                 </div>
               </Link>
               <Link href="/profile">
-                <div className="p-3 bg-gray-500/20 rounded-xl text-center hover:bg-gray-500/30 transition cursor-pointer">
-                  <Settings className="w-5 h-5 text-gray-400 mx-auto mb-1" />
-                  <p className="text-xs text-white">الإعدادات</p>
+                <div className="p-2 sm:p-3 bg-gray-500/20 rounded-xl text-center hover:bg-gray-500/30 transition cursor-pointer min-h-[68px] sm:min-h-[88px] flex flex-col items-center justify-center">
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 mx-auto mb-0.5 sm:mb-1" />
+                  <p className="text-[10px] sm:text-xs text-white">الإعدادات</p>
                 </div>
               </Link>
             </div>
           </div>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center">
-            <h3 className="font-semibold text-white">آخر الصفقات</h3>
-            <Link href="/trades" className="text-sm text-blue-400 hover:text-blue-300 transition">
+        {/* ===== آخر الصفقات — كروت للجوال / جدول للديسكتوب ===== */}
+        <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 flex justify-between items-center">
+            <h3 className="font-semibold text-white text-sm sm:text-base">آخر الصفقات</h3>
+            <Link href="/trades" className="text-xs sm:text-sm text-blue-400 hover:text-blue-300 transition">
               عرض الكل
             </Link>
           </div>
           {trades.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-blue-200">لا توجد صفقات حتى الآن</p>
+            <div className="text-center py-8 sm:py-12">
+              <p className="text-blue-200 text-sm">لا توجد صفقات حتى الآن</p>
               <Link href="/marketplace">
-                <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg">ابدأ أول صفقة</button>
+                <button className="mt-3 sm:mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">ابدأ أول صفقة</button>
               </Link>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-white/5">
-                  <tr className="text-right">
-                    <th className="px-6 py-3 text-xs font-medium text-blue-300">رقم الصفقة</th>
-                    <th className="px-6 py-3 text-xs font-medium text-blue-300">النوع</th>
-                    <th className="px-6 py-3 text-xs font-medium text-blue-300">المبلغ</th>
-                    <th className="px-6 py-3 text-xs font-medium text-blue-300">الحالة</th>
-                    <th className="px-6 py-3 text-xs font-medium text-blue-300"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10">
-                  {trades.slice(0, 5).map((trade) => {
-                    const isBuyer = trade.buyerId === user?.id;
-                    const status = getTradeStatus(trade.status);
-                    return (
-                      <tr key={trade.id} className="hover:bg-white/5 transition">
-                        <td className="px-6 py-4 text-sm font-mono text-blue-300">{trade.tradeReference}</td>
-                        <td className="px-6 py-4">
-                          <span className={`text-xs px-2 py-1 rounded-full ${isBuyer ? 'bg-green-500/20 text-green-300' : 'bg-orange-500/20 text-orange-300'}`}>
+            <>
+              {/* === كروت للجوال === */}
+              <div className="block sm:hidden divide-y divide-white/10">
+                {trades.slice(0, 5).map((trade) => {
+                  const isBuyer = trade.buyerId === user?.id;
+                  const status = getTradeStatus(trade.status);
+                  return (
+                    <Link key={trade.id} href={`/trades/${trade.id}`} className="block px-4 py-3 hover:bg-white/5 transition">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-xs text-blue-300">{trade.tradeReference}</span>
+                        <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${status.color}`}>
+                          {status.icon}
+                          {status.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${isBuyer ? 'bg-green-500/20 text-green-300' : 'bg-orange-500/20 text-orange-300'}`}>
                             {isBuyer ? 'شراء' : 'بيع'}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm font-medium text-white">{trade.amountUsdt} USDT</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${status.color}`}>
-                            {status.icon}
-                            {status.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Link href={`/trades/${trade.id}`}>
-                            <Eye className="w-4 h-4 text-blue-400 hover:text-blue-300 cursor-pointer" />
-                          </Link>
-                        </td>
-                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <span className="text-sm font-medium text-white">{trade.amountUsdt} USDT</span>
+                        </div>
+                        <Eye className="w-3.5 h-3.5 text-blue-400" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+              {/* === جدول للديسكتوب === */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-white/5">
+                    <tr className="text-right">
+                      <th className="px-4 lg:px-6 py-3 text-xs font-medium text-blue-300">رقم الصفقة</th>
+                      <th className="px-4 lg:px-6 py-3 text-xs font-medium text-blue-300">النوع</th>
+                      <th className="px-4 lg:px-6 py-3 text-xs font-medium text-blue-300">المبلغ</th>
+                      <th className="px-4 lg:px-6 py-3 text-xs font-medium text-blue-300">الحالة</th>
+                      <th className="px-4 lg:px-6 py-3 text-xs font-medium text-blue-300"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {trades.slice(0, 5).map((trade) => {
+                      const isBuyer = trade.buyerId === user?.id;
+                      const status = getTradeStatus(trade.status);
+                      return (
+                        <tr key={trade.id} className="hover:bg-white/5 transition">
+                          <td className="px-4 lg:px-6 py-4 text-sm font-mono text-blue-300">{trade.tradeReference}</td>
+                          <td className="px-4 lg:px-6 py-4">
+                            <span className={`text-xs px-2 py-1 rounded-full ${isBuyer ? 'bg-green-500/20 text-green-300' : 'bg-orange-500/20 text-orange-300'}`}>
+                              {isBuyer ? 'شراء' : 'بيع'}
+                            </span>
+                          </td>
+                          <td className="px-4 lg:px-6 py-4 text-sm font-medium text-white">{trade.amountUsdt} USDT</td>
+                          <td className="px-4 lg:px-6 py-4">
+                            <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${status.color}`}>
+                              {status.icon}
+                              {status.label}
+                            </span>
+                          </td>
+                          <td className="px-4 lg:px-6 py-4">
+                            <Link href={`/trades/${trade.id}`}>
+                              <Eye className="w-4 h-4 text-blue-400 hover:text-blue-300 cursor-pointer" />
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

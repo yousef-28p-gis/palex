@@ -58,7 +58,7 @@ export class AdminService {
         phone: true,
         role: true,
         kycStatus: true,
-        trustLevel: true,
+
         totalTrades: true,
         isSuspended: true,
         createdAt: true,
@@ -82,7 +82,7 @@ export class AdminService {
         phone: true,
         role: true,
         kycStatus: true,
-        trustLevel: true,
+
         totalTrades: true,
         successRate: true,
         averageRating: true,

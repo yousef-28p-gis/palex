@@ -124,7 +124,6 @@ export class AuthService {
         phone: user.phone,
         role: user.role,
         kycStatus: user.kycStatus,
-        trustLevel: user.trustLevel,
         isSuspended: user.isSuspended,
         suspensionReason: user.suspensionReason,
       },
@@ -237,7 +236,6 @@ export class AuthService {
         phone: true,
         role: true,
         kycStatus: true,
-        trustLevel: true,
         totalTrades: true,
         successRate: true,
         averageRating: true,
@@ -318,6 +316,30 @@ export class AuthService {
     return { success: true, message: 'تم إعادة تعيين الحالة، يمكنك الآن إعادة تقديم طلب التوثيق' };
   }
 
+  private readonly ALLOWED_DOMAINS = new Set([
+    // الإيميلات المحلية الفلسطينية
+    'gmail.com',
+    'hotmail.com', 'outlook.com', 'live.com', 'msn.com',
+    'yahoo.com', 'yahoo.fr', 'yahoo.co.uk',
+    'protonmail.com', 'proton.me',
+    'icloud.com', 'me.com',
+    'aol.com',
+    'mail.com',
+    'zoho.com',
+    'yandex.com',
+    'gmx.com', 'gmx.de',
+    'tutamail.com', 'tuta.io',
+    'fastmail.com', 'fastmail.fm',
+    'rediffmail.com',
+    'libero.it',
+    'web.de',
+    'online.de',
+    'gmx.net',
+    // الإيميلات الفلسطينية
+    'gmail.ps',
+    'hotmail.ps',
+  ]);
+
   private validateRegistration(dto: RegisterDto) {
     if (!dto.fullName || dto.fullName.length < 3) {
       throw new BadRequestException('❌ الاسم الكامل يجب أن يكون 3 أحرف على الأقل');
@@ -325,6 +347,11 @@ export class AuthService {
     const emailRegex = /^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$/;
     if (!emailRegex.test(dto.email)) {
       throw new BadRequestException('❌ البريد الإلكتروني غير صالح (مثال: name@domain.com)');
+    }
+    // فحص الإيميل — السماح فقط بالدومينات المعروفة
+    const domain = dto.email.split('@')[1]?.toLowerCase();
+    if (domain && !this.ALLOWED_DOMAINS.has(domain)) {
+      throw new BadRequestException('❌ البريد الإلكتروني غير مسموح. استخدم Gmail, Hotmail, Yahoo أو بريداً حقيقياً');
     }
     const phoneRegex = /^05[0-9]{8}$/;
     if (!phoneRegex.test(dto.phone)) {

@@ -1,5 +1,5 @@
 // ===== FILE: src/modules/trade/trade.module.ts =====
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { TradeController } from './trade.controller';
@@ -22,6 +22,7 @@ import { TronNodeService } from '../../shared/services/tron-node.service'; // �
       }),
     }),
     WalletModule, // ✅ استيراد WalletModule بالكامل
+    forwardRef(() => WalletModule), // ✅ forwardRef لتجنب circular dependency
   ],
   controllers: [TradeController],
   providers: [
@@ -33,6 +34,6 @@ import { TronNodeService } from '../../shared/services/tron-node.service'; // �
     EncryptionService,    // ✅ أضف هذا
     TronNodeService,      // ✅ أضف هذا
   ],
-  exports: [TradeService],
+  exports: [TradeService, TradeGateway],
 })
 export class TradeModule {}

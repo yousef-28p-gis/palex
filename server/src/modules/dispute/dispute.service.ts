@@ -6,6 +6,7 @@ import { WalletService } from '../wallet/wallet.service';
 import { EncryptionService } from '../../shared/services/encryption.service';
 import { TronNodeService } from '../../shared/services/tron-node.service';
 import { BscWalletService } from '../blockchain/bsc-wallet.service';
+import { TradeGateway } from '../trade/trade.gateway';
 import { OpenDisputeDto } from './dto/open-dispute.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
@@ -21,6 +22,7 @@ export class DisputeService {
     private encryption: EncryptionService,
     private tronNode: TronNodeService,
     private bscWallet: BscWalletService,
+    private tradeGateway: TradeGateway,
   ) {}
 
   async openDispute(userId: string, dto: OpenDisputeDto) {
@@ -126,6 +128,18 @@ export class DisputeService {
     await this.prisma.trade.update({
       where: { id: dto.tradeId },
       data: { status: 'dispute_opened' },
+    });
+
+    // ✅ إعلام الطرفين عبر WebSocket
+    this.tradeGateway.sendToUser(trade.sellerId, 'trade:update', {
+      tradeId: dto.tradeId,
+      status: 'dispute_opened',
+      message: `⚠️ تم فتح نزاع على الصفقة: ${dto.reason}`,
+    });
+    this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+      tradeId: dto.tradeId,
+      status: 'dispute_opened',
+      message: `⚠️ تم فتح نزاع على الصفقة: ${dto.reason}`,
     });
 
     await this.mailService.sendEmail({

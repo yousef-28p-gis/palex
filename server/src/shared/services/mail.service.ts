@@ -37,7 +37,7 @@ export class MailService {
 
     try {
       await this.transporter.sendMail({
-        from: this.configService.get('SMTP_FROM', 'noreply@palescrow.com'),
+        from: this.configService.get('SMTP_FROM', 'noreply@palex.com'),
         ...options,
       });
       this.logger.log(`Email sent to ${options.to}`);
@@ -53,7 +53,7 @@ export class MailService {
     
     return this.sendEmail({
       to,
-      subject: 'إعادة تعيين كلمة المرور - PalEscrow',
+      subject: 'إعادة تعيين كلمة المرور - PALEX',
       html: `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb;">مرحباً ${name}!</h2>

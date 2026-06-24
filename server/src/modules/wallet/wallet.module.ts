@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { WalletService } from './wallet.service';
 import { WalletController } from './wallet.controller';
@@ -7,9 +7,10 @@ import { BscWalletService } from '../blockchain/bsc-wallet.service';
 import { TronNodeService } from '../../shared/services/tron-node.service';
 import { PrismaService } from '../../shared/services/prisma.service';
 import { EncryptionService } from '../../shared/services/encryption.service';
+import { TradeModule } from '../trade/trade.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot()],
+  imports: [ScheduleModule.forRoot(), forwardRef(() => TradeModule)],
   controllers: [WalletController],
   providers: [
     WalletService,

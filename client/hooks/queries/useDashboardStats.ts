@@ -58,12 +58,6 @@ export function useDashboardStats() {
           pendingTrades: pendingTrades.length,
           completedThisMonth: thisMonthTrades.length,
         },
-        trustLevel: {
-          currentLevel,
-          nextLevel,
-          tradesToNextLevel: Math.max(0, tradesToNextLevel),
-          currentTrades: completedCount,
-        }
       };
     },
   });

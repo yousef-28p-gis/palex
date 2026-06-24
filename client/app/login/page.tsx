@@ -1,40 +1,78 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { Eye, EyeOff, Shield, Mail, Lock, LogIn, MessageCircle, X } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Eye, EyeOff, Shield, Mail, Lock, LogIn, X, Send, CheckCircle } from 'lucide-react';
 
-function LoginForm() {
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect');
-  const message = searchParams.get('message');
+export default function LoginPage() {
+  const router = useRouter();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // ✅ حالة Modal نسيت كلمة المرور
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotErr, setForgotErr] = useState('');
 
-  // ✅ عرض رسالة من middleware إذا وجدت
-  useState(() => {
-    if (message) {
-      toast.error(message);
+  const handleForgotPassword = async () => {
+    if (!forgotEmail) { setForgotErr('يرجى إدخال البريد الإلكتروني'); return; }
+    setForgotErr('');
+    setForgotLoading(true);
+    try {
+      const r = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setForgotSent(true);
+      } else {
+        setForgotErr(d.message || 'فشل إرسال الإيميل');
+      }
+    } catch (err: any) {
+      setForgotErr('حدث خطأ في الاتصال');
+    } finally {
+      setForgotLoading(false);
     }
-  });
+  };
+
+  const resetModal = () => {
+    setShowResetModal(false);
+    setForgotEmail('');
+    setForgotSent(false);
+    setForgotErr('');
+  };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    const email = emailRef.current?.value || '';
+    const password = passwordRef.current?.value || '';
+    if (!email || !password) return;
+    
     setError('');
     setIsLoading(true);
     try {
-      await login({ email, password }, redirectTo || undefined);
-      // ✅ login() في useAuth يتولى التوجيه تلقائياً
+      await login({ email, password }, '__skip_redirect__');
+      // نجاح تسجيل الدخول → عرض رسالة
+      setShowSuccessModal(true);
+      // بعد 2 ثانية → تحويل
+      let redirectTo: string | undefined;
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        redirectTo = params.get('redirect') || '/dashboard';
+      }
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        router.push(redirectTo || '/dashboard');
+      }, 2000);
     } catch (err: any) {
       const message = err.response?.data?.message || 'فشل تسجيل الدخول';
       setError(message);
@@ -49,7 +87,6 @@ function LoginForm() {
         <div className="w-full max-w-4xl">
           <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20">
             <div className="grid lg:grid-cols-2">
-              {/* الجانب الأيمن - صورة وشعار */}
               <div className="hidden lg:flex flex-col justify-center items-center p-12 bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
                 <div className="text-center">
                   <div className="w-24 h-24 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
@@ -60,7 +97,6 @@ function LoginForm() {
                 </div>
               </div>
 
-              {/* الجانب الأيسر - نموذج تسجيل الدخول */}
               <div className="p-8 lg:p-12">
                 <div className="text-center mb-8">
                   <h1 className="text-3xl font-bold text-white mb-2">تسجيل الدخول</h1>
@@ -68,14 +104,12 @@ function LoginForm() {
                 </div>
 
                 <div className="space-y-6">
-                  {/* ✅ رسالة الخطأ الثابتة */}
                   {error && (
                     <div className="bg-red-500/20 border border-red-500 rounded-xl p-3 text-red-200 text-sm text-center">
                       {error}
                     </div>
                   )}
 
-                  {/* البريد الإلكتروني */}
                   <div>
                     <label className="block text-sm font-medium text-blue-200 mb-1">
                       البريد الإلكتروني <span className="text-red-400">*</span>
@@ -83,9 +117,9 @@ function LoginForm() {
                     <div className="relative">
                       <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
+                        ref={emailRef}
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        defaultValue=""
                         onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) handleSubmit(e); }}
                         className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                         placeholder="you@hotmail.com"
@@ -95,7 +129,6 @@ function LoginForm() {
                     </div>
                   </div>
 
-                  {/* كلمة المرور */}
                   <div>
                     <label className="block text-sm font-medium text-blue-200 mb-1">
                       كلمة المرور <span className="text-red-400">*</span>
@@ -103,9 +136,9 @@ function LoginForm() {
                     <div className="relative">
                       <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
+                        ref={passwordRef}
                         type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        defaultValue=""
                         onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) handleSubmit(e); }}
                         className="w-full pr-10 pl-10 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                         placeholder="••••••••"
@@ -122,7 +155,6 @@ function LoginForm() {
                     </div>
                   </div>
 
-                  {/* ✅ نسيت كلمة المرور - تفتح Modal بدلاً من صفحة منفصلة */}
                   <div className="flex justify-end">
                     <button
                       type="button"
@@ -133,7 +165,6 @@ function LoginForm() {
                     </button>
                   </div>
 
-                  {/* زر تسجيل الدخول */}
                   <button
                     type="button"
                     onClick={handleSubmit}
@@ -150,7 +181,6 @@ function LoginForm() {
                     )}
                   </button>
 
-                  {/* رابط إنشاء حساب */}
                   <p className="text-center text-sm text-blue-200">
                     ليس لديك حساب؟{' '}
                     <Link href="/register" prefetch={false} className="text-white font-semibold hover:underline">
@@ -164,89 +194,101 @@ function LoginForm() {
         </div>
       </div>
 
-      {/* ✅ Modal نسيت كلمة المرور - مدمج بدلاً من صفحة منفصلة */}
       {showResetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* الخلفية المعتمة */}
-          <div 
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setShowResetModal(false)}
-          />
-          
-          {/* محتوى الـ Modal */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={resetModal} />
           <div className="relative z-10 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-white/20 overflow-hidden">
             <div className="p-6">
-              {/* رأس الـ Modal */}
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center">
-                    <MessageCircle className="w-5 h-5 text-yellow-400" />
+                    <Mail className="w-5 h-5 text-yellow-400" />
                   </div>
                   <h2 className="text-xl font-bold text-white">إعادة تعيين كلمة المرور</h2>
                 </div>
-                <button
-                  onClick={() => setShowResetModal(false)}
-                  className="p-1 rounded-lg hover:bg-white/10 transition text-gray-400 hover:text-white"
-                >
+                <button onClick={resetModal} className="p-1 rounded-lg hover:bg-white/10 transition text-gray-400 hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
-              {/* نص الـ Modal */}
-              <div className="space-y-4">
-                <p className="text-blue-200 text-sm leading-relaxed">
-                  للتواصل مع الدعم الفني وإعادة تعيين كلمة المرور، يرجى التواصل معنا عبر واتساب:
-                </p>
-                
-                <div className="bg-white/5 rounded-xl p-4 text-center">
-                  <p className="text-gray-400 text-xs mb-2">📱 رقم واتساب الدعم الفني</p>
-                  <a
-                    href="https://wa.me/9705991234567?text=أحتاج%20مساعدة%20في%20إعادة%20تعيين%20كلمة%20المرور"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition text-sm font-semibold"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    +970 59 123 4567
-                  </a>
-                </div>
-                
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                  <p className="text-blue-300 text-xs">
-                    💡 سيتم الرد عليك خلال 24 ساعة. يرجى تجهيز رقم هاتفك المسجل في المنصة.
+
+              {forgotSent ? (
+                <div className="text-center py-6 space-y-4">
+                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle className="w-8 h-8 text-green-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">تم الإرسال ✓</h3>
+                  <p className="text-blue-200 text-sm">
+                    تم إرسال رابط إعادة تعيين كلمة المرور إلى <strong className="text-white">{forgotEmail}</strong>
                   </p>
+                  <p className="text-gray-400 text-xs">تحقق من صندوق الوارد أو البريد المزعج (Spam)</p>
+                  <button onClick={resetModal} className="px-6 py-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition text-sm">
+                    حسناً
+                  </button>
                 </div>
-              </div>
-              
-              {/* أزرار الـ Modal */}
-              <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
-                <button
-                  onClick={() => setShowResetModal(false)}
-                  className="flex-1 px-4 py-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition"
-                >
-                  إلغاء
-                </button>
-                <a
-                  href="https://wa.me/9705991234567?text=أحتاج%20مساعدة%20في%20إعادة%20تعيين%20كلمة%20المرور"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition text-center"
-                >
-                  تواصل عبر واتساب
-                </a>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-blue-200 text-sm leading-relaxed">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابط إعادة تعيين كلمة المرور.</p>
+                  
+                  {forgotErr && (
+                    <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 text-red-200 text-xs text-center">
+                      {forgotErr}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-blue-200 mb-1">البريد الإلكتروني</label>
+                    <div className="relative">
+                      <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="email"
+                        value={forgotEmail}
+                        onChange={e => setForgotEmail(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !forgotLoading) handleForgotPassword(); }}
+                        className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button onClick={resetModal} className="flex-1 px-4 py-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition text-sm">
+                      إلغاء
+                    </button>
+                    <button onClick={handleForgotPassword} disabled={forgotLoading} className="flex-1 px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl hover:from-yellow-600 hover:to-yellow-700 transition text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+                      {forgotLoading ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>إرسال <Send className="w-3.5 h-3.5" /></>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ رسالة نجاح تسجيل الدخول */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative z-10 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl max-w-sm w-full border border-white/20 overflow-hidden p-8 text-center">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">تم تسجيل الدخول ✓</h2>
+            <p className="text-blue-200 text-sm">سيتم تحويلك إلى لوحة التحكم...</p>
+            <div className="mt-4 flex justify-center">
+              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             </div>
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center"><div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}>
-      <LoginForm />
-    </Suspense>
   );
 }

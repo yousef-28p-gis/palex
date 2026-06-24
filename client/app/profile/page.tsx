@@ -232,6 +232,7 @@ function ProfileContent() {
       
       if (response.ok) {
         localStorage.setItem('profileImage', profileImage!);
+        setProfileImageFile(null); // 🎯 نخفي الأزرار
         toast.success('تم تحديث الصورة الشخصية بنجاح');
         updateUser({ ...authUser!, profileImageUrl: profileImage! });
       } else {
@@ -596,15 +597,15 @@ function ProfileContent() {
 
             {/* Wallets Section */}
             {activeSection === 'wallets' && (
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Wallet className="w-5 h-5 text-blue-400" />المحافظ الرقمية</h2>
+              <div className="bg-white/5 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2"><Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />المحافظ الرقمية</h2>
                 
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 mb-4">
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-2 sm:p-3 mb-3 sm:mb-4">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5" />
-                    <div className="text-sm">
-                      <p className="font-medium text-yellow-400">⚠️ تنبيه مهم</p>
-                      <p className="text-yellow-300/80 text-xs mt-1">
+                    <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400 mt-0.5 shrink-0" />
+                    <div className="text-xs sm:text-sm">
+                      <p className="font-medium text-yellow-400 text-xs sm:text-sm">⚠️ تنبيه مهم</p>
+                      <p className="text-yellow-300/80 text-[10px] sm:text-xs mt-1">
                         يمكنك إضافة عنوان واحد فقط أو كليهما. 
                         للشراء عبر شبكة TRC20، يجب إضافة عنوان TRC20.
                         للشراء عبر شبكة BEP20، يجب إضافة عنوان BEP20.
@@ -613,16 +614,16 @@ function ProfileContent() {
                   </div>
                 </div>
                 
-                <div className="space-y-6">
+                <div className="space-y-3 sm:space-y-6">
                   {/* TRC20 Wallet */}
-                  <div className="bg-blue-500/5 rounded-xl p-5 border border-blue-500/20">
-                    <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-blue-400" />
+                  <div className="bg-blue-500/5 rounded-xl p-3 sm:p-5 border border-blue-500/20">
+                    <h3 className="font-semibold text-white mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+                      <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
                       محفظة TRC20 (Tron)
-                      {userData.trc20Wallet && <span className="text-xs text-green-400 bg-green-500/20 px-2 py-0.5 rounded-full">مفعلة</span>}
-                      {!userData.trc20Wallet && <span className="text-xs text-yellow-400 bg-yellow-500/20 px-2 py-0.5 rounded-full">غير مفعلة</span>}
+                      {userData.trc20Wallet && <span className="text-[10px] sm:text-xs text-green-400 bg-green-500/20 px-1.5 sm:px-2 py-0.5 rounded-full">مفعلة</span>}
+                      {!userData.trc20Wallet && <span className="text-[10px] sm:text-xs text-yellow-400 bg-yellow-500/20 px-1.5 sm:px-2 py-0.5 rounded-full">غير مفعلة</span>}
                     </h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input 
                         type="text" 
                         value={userData.trc20Wallet} 
@@ -635,30 +636,30 @@ function ProfileContent() {
                           }
                         }}
                         placeholder="أدخل عنوان محفظة TRC20 (يبدأ بـ T)" 
-                        className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        className="flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm" 
                       />
                       {userData.trc20Wallet && (
-                        <button onClick={() => handleCopy(userData.trc20Wallet, 'trc20')} className="px-4 py-3 bg-white/10 rounded-xl hover:bg-white/20">
-                          {copied === 'trc20' ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5 text-white" />}
+                        <button onClick={() => handleCopy(userData.trc20Wallet, 'trc20')} className="px-3 sm:px-4 py-2 sm:py-3 bg-white/10 rounded-xl hover:bg-white/20 shrink-0">
+                          {copied === 'trc20' ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" /> : <Copy className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
                         </button>
                       )}
                     </div>
-                    {walletErrors.trc20 && <p className="mt-2 text-sm text-red-400">{walletErrors.trc20}</p>}
-                    <p className="text-xs text-blue-400 mt-2">مثال: TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</p>
-                    <p className="text-xs text-yellow-400 mt-1">
+                    {walletErrors.trc20 && <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-red-400">{walletErrors.trc20}</p>}
+                    <p className="text-[10px] sm:text-xs text-blue-400 mt-1 sm:mt-2">مثال: TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</p>
+                    <p className="text-[10px] sm:text-xs text-yellow-400 mt-1">
                       {userData.trc20Wallet ? '✅ يمكنك الشراء عبر شبكة TRC20' : '⚠️ يجب إضافة عنوان للشراء عبر TRC20'}
                     </p>
                   </div>
 
                   {/* BEP20 Wallet */}
-                  <div className="bg-purple-500/5 rounded-xl p-5 border border-purple-500/20">
-                    <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-purple-400" />
+                  <div className="bg-purple-500/5 rounded-xl p-3 sm:p-5 border border-purple-500/20">
+                    <h3 className="font-semibold text-white mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+                      <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400" />
                       محفظة BEP20 (Binance Smart Chain)
-                      {userData.bscWallet && <span className="text-xs text-green-400 bg-green-500/20 px-2 py-0.5 rounded-full">مفعلة</span>}
-                      {!userData.bscWallet && <span className="text-xs text-yellow-400 bg-yellow-500/20 px-2 py-0.5 rounded-full">غير مفعلة</span>}
+                      {userData.bscWallet && <span className="text-[10px] sm:text-xs text-green-400 bg-green-500/20 px-1.5 sm:px-2 py-0.5 rounded-full">مفعلة</span>}
+                      {!userData.bscWallet && <span className="text-[10px] sm:text-xs text-yellow-400 bg-yellow-500/20 px-1.5 sm:px-2 py-0.5 rounded-full">غير مفعلة</span>}
                     </h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input 
                         type="text" 
                         value={userData.bscWallet} 
@@ -671,25 +672,25 @@ function ProfileContent() {
                           }
                         }}
                         placeholder="أدخل عنوان محفظة BEP20 (يبدأ بـ 0x)" 
-                        className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        className="flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm" 
                       />
                       {userData.bscWallet && (
-                        <button onClick={() => handleCopy(userData.bscWallet, 'bsc')} className="px-4 py-3 bg-white/10 rounded-xl hover:bg-white/20">
-                          {copied === 'bsc' ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5 text-white" />}
+                        <button onClick={() => handleCopy(userData.bscWallet, 'bsc')} className="px-3 sm:px-4 py-2 sm:py-3 bg-white/10 rounded-xl hover:bg-white/20 shrink-0">
+                          {copied === 'bsc' ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" /> : <Copy className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
                         </button>
                       )}
                     </div>
-                    {walletErrors.bsc && <p className="mt-2 text-sm text-red-400">{walletErrors.bsc}</p>}
-                    <p className="text-xs text-purple-400 mt-2">مثال: 0x...</p>
-                    <p className="text-xs text-yellow-400 mt-1">
+                    {walletErrors.bsc && <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-red-400">{walletErrors.bsc}</p>}
+                    <p className="text-[10px] sm:text-xs text-purple-400 mt-1 sm:mt-2">مثال: 0x...</p>
+                    <p className="text-[10px] sm:text-xs text-yellow-400 mt-1">
                       {userData.bscWallet ? '✅ يمكنك الشراء عبر شبكة BEP20' : '⚠️ يجب إضافة عنوان للشراء عبر BEP20'}
                     </p>
                   </div>
 
-                  <Button onClick={handleUpdateWallets} loading={isLoading} className="w-full">حفظ المحافظ</Button>
+                  <Button onClick={handleUpdateWallets} loading={isLoading} className="w-full text-xs sm:text-sm">حفظ المحافظ</Button>
 
-                  <div className="bg-yellow-500/10 rounded-xl p-4 text-sm text-yellow-300 flex items-start gap-3">
-                    <Shield className="w-5 h-5 shrink-0" />
+                  <div className="bg-yellow-500/10 rounded-xl p-3 sm:p-4 text-xs sm:text-sm text-yellow-300 flex items-start gap-2 sm:gap-3">
+                    <Shield className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                     <p>هذه هي المحافظ التي ستستلم عليها USDT بعد إتمام الصفقات. تأكد من صحة العناوين.</p>
                   </div>
                 </div>

@@ -5,6 +5,41 @@ import { PrismaService } from '../../shared/services/prisma.service';
 export class StatsService {
   constructor(private prisma: PrismaService) {}
 
+  async getTopSellers() {
+    // ✅ أفضل 3 بائعين حسب عدد الصفقات ومتوسط التقييم
+    const sellers = await this.prisma.user.findMany({
+      where: {
+        role: 'user',
+        totalTrades: { gt: 0 },
+        averageRating: { gt: 0 },
+        isSuspended: false,
+      },
+      orderBy: [
+        { totalTrades: 'desc' },
+        { averageRating: 'desc' },
+      ],
+      take: 3,
+      select: {
+        id: true,
+        fullName: true,
+        averageRating: true,
+        totalTrades: true,
+        successRate: true,
+      },
+    });
+
+    return {
+      success: true,
+      data: sellers.map(s => ({
+        id: s.id,
+        name: s.fullName,
+        averageRating: Number(s.averageRating),
+        totalTrades: s.totalTrades,
+        successRate: Number(s.successRate),
+      })),
+    };
+  }
+
   async getPublicStats() {
     // ✅ استعلام واحد يجمع كل الإحصائيات
     const [

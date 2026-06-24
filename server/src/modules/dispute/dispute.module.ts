@@ -9,9 +9,10 @@ import { WalletModule } from '../wallet/wallet.module';
 import { EncryptionService } from '../../shared/services/encryption.service';
 import { TronNodeService } from '../../shared/services/tron-node.service';
 import { BscWalletService } from '../blockchain/bsc-wallet.service';
+import { TradeModule } from '../trade/trade.module';
 
 @Module({
-  imports: [WalletModule],
+  imports: [WalletModule, TradeModule],
   controllers: [DisputeController],
   providers: [
     DisputeService,

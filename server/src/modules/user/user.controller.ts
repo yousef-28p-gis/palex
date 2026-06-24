@@ -14,7 +14,9 @@ import { UpdateWorkHoursDto } from './dto/update-work-hours.dto';
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UserController {
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+  ) {}
 
   @Get('profile')
   async getProfile(@CurrentUser('id') userId: string) {
@@ -110,4 +112,5 @@ export class UserController {
   async updatePresence(@CurrentUser('id') userId: string, @Body('isActive') isActive: boolean) {
     return this.userService.updatePresence(userId, isActive);
   }
+
 }

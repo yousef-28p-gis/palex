@@ -23,7 +23,6 @@ export class UserService {
         governorate: true,
         role: true,
         kycStatus: true,
-        trustLevel: true,
         totalTrades: true,
         successRate: true,
         averageRating: true,

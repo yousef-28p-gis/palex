@@ -6,7 +6,6 @@ export interface User {
   phone: string;
   role: 'user' | 'support_admin' | 'kyc_admin' | 'finance_admin' | 'super_admin';
   kycStatus: 'none' | 'pending' | 'approved' | 'rejected' | 'advanced' | 'pro';
-  trustLevel: 'new_trader' | 'trusted_trader' | 'professional' | 'elite' | 'suspended';
   totalTrades: number;
   successRate: number;
   averageRating: number;
@@ -26,7 +25,6 @@ export interface Offer {
     fullName: string;
     averageRating: number;
     totalTrades: number;
-    trustLevel: string;
     kycStatus: string;
     profileImageUrl?: string;
     workHoursStart?: string;

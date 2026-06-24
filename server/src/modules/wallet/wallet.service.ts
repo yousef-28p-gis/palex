@@ -5,6 +5,7 @@ import { HdWalletService } from '../blockchain/hd-wallet.service';
 import { BscWalletService } from '../blockchain/bsc-wallet.service';
 import { TronNodeService } from '../../shared/services/tron-node.service';
 import { EncryptionService } from '../../shared/services/encryption.service';
+import { TradeGateway } from '../trade/trade.gateway';
 
 @Injectable()
 export class WalletService {
@@ -17,6 +18,7 @@ export class WalletService {
     private bscWallet: BscWalletService,
     private tronNode: TronNodeService,
     private encryption: EncryptionService,
+    private tradeGateway: TradeGateway,
   ) {}
 
   async getNetworkFee(network: 'trc20' | 'bep20'): Promise<number> {
@@ -150,6 +152,17 @@ export class WalletService {
         data: { status: 'cancelled' },
       });
       
+      this.tradeGateway.sendToUser(trade.sellerId, 'trade:update', {
+        tradeId,
+        status: 'cancelled',
+        message: '⏰ انتهت مهلة الموافقة على الصفقة',
+      });
+      this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+        tradeId,
+        status: 'cancelled',
+        message: '⏰ البائع لم يستجب خلال المهلة، تم إلغاء الصفقة',
+      });
+      
       this.logger.log(`✅ Trade ${trade.id}: Cancelled due to seller not responding`);
       return;
     }
@@ -177,6 +190,12 @@ export class WalletService {
       await this.prisma.trade.update({
         where: { id: trade.id },
         data: { status: 'cancelled' },
+      });
+      
+      this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+        tradeId,
+        status: 'cancelled',
+        message: '⏰ البائع لم يرسل USDT خلال المهلة، تم إلغاء الصفقة',
       });
       
       this.logger.log(`✅ Trade ${trade.id}: Seller banned, trade cancelled, reserved balance released`);
@@ -237,6 +256,17 @@ export class WalletService {
         data: { status: 'cancelled' },
       });
       
+      this.tradeGateway.sendToUser(trade.sellerId, 'trade:update', {
+        tradeId,
+        status: 'cancelled',
+        message: `⏰ المشتري لم يدفع خلال المهلة. تم رد ${netAmount.toFixed(2)} USDT إلى محفظتك`,
+      });
+      this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+        tradeId,
+        status: 'cancelled',
+        message: '⏰ انتهت مهلة الدفع، تم إلغاء الصفقة',
+      });
+      
       this.logger.log(`✅ Trade ${trade.id}: Buyer banned, refunded ${netAmount} USDT to seller`);
       return;
     }
@@ -272,6 +302,17 @@ export class WalletService {
         data: { status: 'dispute_opened' },
       });
       
+      this.tradeGateway.sendToUser(trade.sellerId, 'trade:update', {
+        tradeId,
+        status: 'dispute_opened',
+        message: '⚠️ تم فتح نزاع تلقائي لعدم تأكيد استلام الدفع خلال المهلة',
+      });
+      this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+        tradeId,
+        status: 'dispute_opened',
+        message: '⚠️ تم فتح نزاع تلقائي لأن البائع لم يؤكد استلام الدفع خلال المهلة',
+      });
+      
       this.logger.log(`✅ Trade ${trade.id}: Auto-dispute opened (seller didn't confirm payment)`);
       return;
     }
@@ -302,6 +343,17 @@ export class WalletService {
           escrowBalance: { decrement: trade.amountUsdt },
           reservedBalance: { decrement: trade.amountUsdt },
         },
+      });
+
+      this.tradeGateway.sendToUser(trade.sellerId, 'trade:update', {
+        tradeId,
+        status: 'completed',
+        message: '🎉 تم إتمام الصفقة تلقائياً (المشتري لم يؤكد ولكن USDT وصل)',
+      });
+      this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+        tradeId,
+        status: 'completed',
+        message: '🎉 تم إتمام الصفقة تلقائياً',
       });
 
       this.logger.log(`✅ Trade ${trade.id}: Auto-completed (buyer didn't confirm but USDT was sent)`);

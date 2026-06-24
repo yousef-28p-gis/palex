@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build
+.next/
+dist/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Tunnel
+.tunnel.pid
+.tunnel_url.txt
+tunnel.log
+/tmp/cloudflared_url.log
+/tmp/cloudflare_url
+/tmp/next-*.log
+update_cloudflare_url.sh

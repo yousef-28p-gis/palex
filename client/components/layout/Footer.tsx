@@ -9,9 +9,7 @@ export function Footer() {
           {/* About */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <span className="font-bold">P</span>
-              </div>
+              <img src="/images/palex-icon-32.png" alt="PALEX" className="w-8 h-8 object-contain rounded-lg" />
               <span className="text-xl font-bold">PALEX</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">

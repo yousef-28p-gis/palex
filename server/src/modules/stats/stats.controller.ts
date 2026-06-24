@@ -7,6 +7,12 @@ export class StatsController {
   constructor(private statsService: StatsService) {}
 
   @SkipThrottle({ strict: true, normal: true, public: false })
+  @Get('top-sellers')
+  async getTopSellers() {
+    return this.statsService.getTopSellers();
+  }
+
+  @SkipThrottle({ strict: true, normal: true, public: false })
   @Get('public')
   async getPublicStats() {
     return this.statsService.getPublicStats();

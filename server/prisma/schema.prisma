@@ -18,11 +18,10 @@ model User {
   nationalId            String?   @map("national_id")
   phone                 String?
   governorate           String?
-    profileImageUrl   String?   @map("profile_image_url")
+  profileImageUrl       String?   @map("profile_image_url")
 
   role                  String    @default("user")
   kycStatus             String    @default("none") @map("kyc_status")
-  trustLevel            String    @default("new_trader") @map("trust_level")
   
   totalTrades           Int       @default(0) @map("total_trades")
   successRate           Decimal   @default(0) @map("success_rate") @db.Decimal(5,2)

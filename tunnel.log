@@ -647,3 +647,232 @@
 2026-06-23T16:55:24Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
 2026-06-23T16:55:24Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://electronics-explicitly-gaps-ontario.trycloudflare.com/api/trades/user?limit=100 event=0 ip=198.41.200.233 type=http
 [16:55:24] ✅ الرابط الجديد: https://electronics-explicitly-gaps-ontario.trycloudflare.com
+[11:33:07] 🛑 إيقاف نفق Palex...
+[11:33:07] ✅ لا يوجد نفق على port 3000
+[11:33:07] ✅ تم
+[11:33:08] 🔄 تشغيل نفق TryCloudflare للمشروع Palex...
+[11:33:08] ✅ لا يوجد نفق على port 3000
+[11:33:08] ✅ النفق شغال: https://electronics-explicitly-gaps-ontario.trycloudflare.com
+2026-06-24T11:33:09Z INF Thank you for trying Cloudflare Tunnel. Doing so, without a Cloudflare account, is a quick way to experiment and try it out. However, be aware that these account-less Tunnels have no uptime guarantee, are subject to the Cloudflare Online Services Terms of Use (https://www.cloudflare.com/website-terms/), and Cloudflare reserves the right to investigate your use of Tunnels for violations of such terms. If you intend to use Tunnels in production you should use a pre-created named tunnel by following: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps
+2026-06-24T11:33:09Z INF Requesting new quick Tunnel on trycloudflare.com...
+2026-06-24T11:33:14Z INF +--------------------------------------------------------------------------------------------+
+2026-06-24T11:33:14Z INF |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
+2026-06-24T11:33:14Z INF |  https://comic-allow-common-voip.trycloudflare.com                                         |
+[11:33:14] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T11:33:14Z INF +--------------------------------------------------------------------------------------------+
+2026-06-24T11:33:14Z INF Cannot determine default configuration path. No file [config.yml config.yaml] in [~/.cloudflared ~/.cloudflare-warp ~/cloudflare-warp /etc/cloudflared /usr/local/etc/cloudflared]
+2026-06-24T11:33:14Z INF Version 2026.6.1 (Checksum 5861a10a438fe8ddcfebb3b830f83966cbf193edafce0fe2eeb198fbae1f7a22)
+2026-06-24T11:33:14Z INF GOOS: linux, GOVersion: go1.26.4, GoArch: amd64
+2026-06-24T11:33:14Z INF Settings: map[ha-connections:1 protocol:quic url:http://localhost:3000]
+2026-06-24T11:33:14Z INF Autoupdate frequency is set autoupdateFreq=86400000
+2026-06-24T11:33:14Z INF Generated Connector ID: 6be101f0-d37e-4c3e-88b4-d23d28331b91
+2026-06-24T11:33:14Z INF Initial protocol quic
+2026-06-24T11:33:14Z INF ICMP proxy will use 10.0.0.144 as source for IPv4
+2026-06-24T11:33:14Z INF ICMP proxy will use ::1 in zone lo as source for IPv6
+2026/06/24 11:33:14 failed to sufficiently increase receive buffer size (was: 208 kiB, wanted: 7168 kiB, got: 416 kiB). See https://github.com/quic-go/quic-go/wiki/UDP-Buffer-Sizes for details.
+2026-06-24T11:33:14Z INF ICMP proxy will use 10.0.0.144 as source for IPv4
+2026-06-24T11:33:15Z INF ICMP proxy will use ::1 in zone lo as source for IPv6
+2026-06-24T11:33:15Z INF Starting metrics server on 127.0.0.1:20241/metrics
+2026-06-24T11:33:15Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T11:33:15Z INF Registered tunnel connection connIndex=0 connection=307c3323-ed16-46df-acac-e71b310f4eaf event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T11:33:21Z INF +-------------------------------------------------------------------------------------+
+2026-06-24T11:33:21Z INF |                               CONNECTIVITY PRE-CHECKS                               |
+2026-06-24T11:33:21Z INF +-------------------------------------------------------------------------------------+
+2026-06-24T11:33:21Z INF |  COMPONENT         TARGET                     STATUS  DETAILS                       |
+2026-06-24T11:33:21Z INF |  DNS Resolution    region1.v2.argotunnel.com  PASS    DNS Resolved successfully     |
+2026-06-24T11:33:21Z INF |  DNS Resolution    region2.v2.argotunnel.com  PASS    DNS Resolved successfully     |
+2026-06-24T11:33:21Z INF |  UDP Connectivity  region1.v2.argotunnel.com  PASS    QUIC connection successful    |
+2026-06-24T11:33:21Z INF |  UDP Connectivity  region2.v2.argotunnel.com  PASS    QUIC connection successful    |
+2026-06-24T11:33:21Z INF |  TCP Connectivity  region1.v2.argotunnel.com  PASS    HTTP/2 connection successful  |
+2026-06-24T11:33:21Z INF |  TCP Connectivity  region2.v2.argotunnel.com  PASS    HTTP/2 connection successful  |
+2026-06-24T11:33:21Z INF |  Cloudflare API    api.cloudflare.com:443     PASS    API is reachable              |
+2026-06-24T11:33:21Z INF |                                                                                     |
+2026-06-24T11:33:21Z INF |  SUMMARY: Environment is healthy. cloudflared will use 'quic' as primary protocol.  |
+2026-06-24T11:33:21Z INF +-------------------------------------------------------------------------------------+
+2026-06-24T11:33:21Z INF precheck component="DNS Resolution" details="DNS Resolved successfully" run_id=91b22a76-aa4d-4c32-a697-ac4f7cf96604 status=pass target=region1.v2.argotunnel.com
+2026-06-24T11:33:21Z INF precheck component="DNS Resolution" details="DNS Resolved successfully" run_id=91b22a76-aa4d-4c32-a697-ac4f7cf96604 status=pass target=region2.v2.argotunnel.com
+2026-06-24T11:33:21Z INF precheck component="UDP Connectivity" details="QUIC connection successful" run_id=91b22a76-aa4d-4c32-a697-ac4f7cf96604 status=pass target=region1.v2.argotunnel.com
+2026-06-24T11:33:21Z INF precheck component="UDP Connectivity" details="QUIC connection successful" run_id=91b22a76-aa4d-4c32-a697-ac4f7cf96604 status=pass target=region2.v2.argotunnel.com
+2026-06-24T11:33:21Z INF precheck component="TCP Connectivity" details="HTTP/2 connection successful" run_id=91b22a76-aa4d-4c32-a697-ac4f7cf96604 status=pass target=region1.v2.argotunnel.com
+2026-06-24T11:33:21Z INF precheck component="TCP Connectivity" details="HTTP/2 connection successful" run_id=91b22a76-aa4d-4c32-a697-ac4f7cf96604 status=pass target=region2.v2.argotunnel.com
+2026-06-24T11:33:21Z INF precheck component="Cloudflare API" details="API is reachable" run_id=91b22a76-aa4d-4c32-a697-ac4f7cf96604 status=pass target=api.cloudflare.com:443
+2026-06-24T11:33:21Z INF precheck complete hard_fail=false run_id=91b22a76-aa4d-4c32-a697-ac4f7cf96604 suggested_protocol=quic
+2026-06-24T11:41:40Z ERR  error="Incoming request ended abruptly: context canceled" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T11:41:40Z ERR Request failed error="Incoming request ended abruptly: context canceled" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/?_rsc=r3yhw event=0 ip=198.41.192.47 type=http
+[11:41:40] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T12:22:02Z ERR  error="Incoming request ended abruptly: context canceled" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T12:22:02Z ERR Request failed error="Incoming request ended abruptly: context canceled" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/login event=0 ip=198.41.192.47 type=http
+[12:22:02] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T12:43:33Z ERR  error="Incoming request ended abruptly: context canceled" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T12:43:33Z ERR Request failed error="Incoming request ended abruptly: context canceled" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/dashboard?_rsc=1jqx0 event=0 ip=198.41.192.47 type=http
+[12:43:33] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T12:48:01Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T12:48:01Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T12:48:01Z ERR failed to serve tunnel connection error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T12:48:01Z ERR Serve tunnel error error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T12:48:01Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T12:48:01Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T12:48:01Z INF Registered tunnel connection connIndex=0 connection=f640378c-7a55-4e41-b043-c5c2e36b88c6 event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T13:35:46Z ERR  error="Incoming request ended abruptly: context canceled" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:35:46Z ERR Request failed error="Incoming request ended abruptly: context canceled" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/marketplace?_rsc=8i7ua event=0 ip=198.41.192.47 type=http
+[13:35:47] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:13Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:13Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:36:13] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:18Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:18Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:36:18] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:22Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:22Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/_next/image?url=https%3A%2F%2Fflagcdn.com%2Fw20%2Fps.png&w=32&q=75 event=0 ip=198.41.192.47 type=http
+[13:36:22] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:22Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:22Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/_next/image?url=https%3A%2F%2Fflagcdn.com%2Fw20%2Fus.png&w=32&q=75 event=0 ip=198.41.192.47 type=http
+[13:36:22] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:27Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:27Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:36:27] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:38Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:38Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/offers/my/trade-links event=0 ip=198.41.192.47 type=http
+[13:36:39] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:39Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:39Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:36:39] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:40Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:40Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/trades/user?limit=100 event=0 ip=198.41.192.47 type=http
+[13:36:40] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:41Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:41Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/offers/my/trade-links event=0 ip=198.41.192.47 type=http
+[13:36:41] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:42Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:42Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/trades/user?limit=100 event=0 ip=198.41.192.47 type=http
+[13:36:42] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:44Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:44Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/offers/my/trade-links event=0 ip=198.41.192.47 type=http
+[13:36:44] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:45Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:45Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/trades/user?limit=100 event=0 ip=198.41.192.47 type=http
+[13:36:45] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:48Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:48Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/offers/my/trade-links event=0 ip=198.41.192.47 type=http
+[13:36:48] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:49Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:49Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/trades/user?limit=100 event=0 ip=198.41.192.47 type=http
+[13:36:49] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:36:49Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:36:49Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:36:49] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:37:00Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:37:00Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:37:00] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:57:55Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:57:55Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:57:55] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:58:00Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:58:00Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:58:00] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:58:06Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:58:06Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:58:06] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:58:16Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:58:16Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/trades/user?limit=100 event=0 ip=198.41.192.47 type=http
+[13:58:16] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:58:16Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:58:16Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[13:58:16] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T13:58:17Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T13:58:17Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/trades/user?limit=100 event=0 ip=198.41.192.47 type=http
+[13:58:17] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T14:03:41Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T14:03:41Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/api/ws/?EIO=4&transport=websocket event=0 ip=198.41.192.47 type=ws
+[14:03:41] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T14:09:47Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:09:47Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:09:47Z ERR failed to serve tunnel connection error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:09:47Z ERR Serve tunnel error error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:09:47Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:09:48Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:09:48Z INF Registered tunnel connection connIndex=0 connection=dbf1b47a-66d7-4e76-9343-665c16af3b64 event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T14:50:18Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:50:18Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:50:18Z ERR failed to serve tunnel connection error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:50:18Z ERR Serve tunnel error error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:50:18Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:50:19Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T14:50:19Z INF Registered tunnel connection connIndex=0 connection=7c7592fe-b8fd-4d16-82b8-064d3ac20526 event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T15:26:37Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:26:37Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:26:37Z ERR failed to serve tunnel connection error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:26:37Z ERR Serve tunnel error error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:26:37Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:26:38Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:26:39Z INF Registered tunnel connection connIndex=0 connection=e199a051-3458-42d9-bfdb-93e3a0ca0d7b event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T15:32:26Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:32:26Z ERR failed to run the datagram handler error="context canceled" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:32:26Z ERR failed to serve tunnel connection error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:32:26Z ERR Serve tunnel error error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:32:26Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:32:27Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:32:27Z INF Registered tunnel connection connIndex=0 connection=5f1b86d3-2005-4612-b649-ecec0836aba1 event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T15:36:19Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:36:19Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:36:19Z WRN failed to serve tunnel connection error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:36:19Z WRN Serve tunnel error error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:36:19Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:36:19Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T15:36:19Z INF Registered tunnel connection connIndex=0 connection=64962116-43e5-4d2d-a032-72599170d07c event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T15:46:47Z ERR  error="Error writing response header: stream 577 canceled by remote with error code 0" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T15:46:47Z ERR Request failed error="Error writing response header: stream 577 canceled by remote with error code 0" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/__nextjs_original-stack-frame?isServer=false&isEdgeServer=false&isAppDirectory=true&errorMessage=NotFoundError%3A+Failed+to+execute+%27removeChild%27+on+%27Node%27%3A+The+node+to+be+removed+is+not+a+child+of+this+node.&file=webpack-internal%3A%2F%2F%2F%28app-pages-browser%29%2F.%2Fnode_modules%2Fnext%2Fdist%2Fcompiled%2Freact-dom%2Fcjs%2Freact-dom-client.development.js&methodName=commitMutationEffectsOnFiber&arguments=&lineNumber=12127&column=11 event=0 ip=198.41.192.47 type=http
+[15:46:47] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T16:10:04Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T16:10:04Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T16:10:04Z ERR failed to serve tunnel connection error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T16:10:04Z ERR Serve tunnel error error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T16:10:04Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T16:10:06Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T16:10:06Z INF Registered tunnel connection connIndex=0 connection=6c7e1c98-3851-4410-b002-877d82d55865 event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T16:32:43Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T16:32:43Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/login?_rsc=r55oa event=0 ip=198.41.192.47 type=http
+[16:32:44] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T16:32:44Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T16:32:44Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/login event=0 ip=198.41.192.47 type=http
+[16:32:44] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T17:03:44Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: EOF" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T17:03:44Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: EOF" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/profile?_rsc=xglo9 event=0 ip=198.41.192.47 type=http
+[17:03:44] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T17:03:45Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T17:03:45Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/profile?_rsc=xglo9 event=0 ip=198.41.192.47 type=http
+[17:03:45] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T17:03:45Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T17:03:45Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/profile event=0 ip=198.41.192.47 type=http
+[17:03:45] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T17:20:35Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:20:35Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:20:35Z ERR failed to serve tunnel connection error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:20:35Z ERR Serve tunnel error error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:20:35Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:20:36Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:20:36Z INF Registered tunnel connection connIndex=0 connection=36b241d1-f881-40b3-9f9c-eb8834c54b85 event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T17:26:50Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2026-06-24T17:26:50Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://comic-allow-common-voip.trycloudflare.com/profile event=0 ip=198.41.192.47 type=http
+[17:26:50] ✅ الرابط الجديد: https://comic-allow-common-voip.trycloudflare.com
+2026-06-24T17:28:44Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:28:44Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:28:44Z WRN failed to serve tunnel connection error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:28:44Z ERR Serve tunnel error error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:28:44Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:28:45Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:28:45Z INF Registered tunnel connection connIndex=0 connection=04379316-ec9f-4571-a4af-e8bb17651ead event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T17:36:00Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:36:00Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:36:00Z ERR failed to serve tunnel connection error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:36:00Z ERR Serve tunnel error error="datagram manager encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:36:00Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:36:01Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:36:01Z INF Registered tunnel connection connIndex=0 connection=4cc5a12a-1756-4401-b33f-43646249b9e2 event=0 ip=198.41.192.47 location=vno01 protocol=quic
+2026-06-24T17:43:43Z ERR failed to accept incoming stream requests error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:43:43Z ERR failed to run the datagram handler error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:43:43Z ERR failed to serve tunnel connection error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:43:43Z ERR Serve tunnel error error="accept stream listener encountered a failure while serving" connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:43:43Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:43:43Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(65074) CurveP256] connIndex=0 event=0 ip=198.41.192.47
+2026-06-24T17:43:43Z INF Registered tunnel connection connIndex=0 connection=ee3d69d1-f2f1-4cde-ac51-c6c7151c65c6 event=0 ip=198.41.192.47 location=vno01 protocol=quic

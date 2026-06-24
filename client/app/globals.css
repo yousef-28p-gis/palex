@@ -9,10 +9,15 @@
     box-sizing: border-box;
   }
 
+  html {
+    overflow-y: scroll;
+    background: #0f172a;
+  }
+
   body {
     direction: rtl;
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #f5f7fa 0%, #f9fafb 100%);
+    background: #0f172a;
     color: #1f2937;
     min-height: 100vh;
   }

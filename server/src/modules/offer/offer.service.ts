@@ -51,7 +51,7 @@ export class OfferService {
             fullName: true,
             averageRating: true,
             totalTrades: true,
-            trustLevel: true,
+
             kycStatus: true,
             profileImageUrl: true,
             workHoursStart: true,
@@ -130,7 +130,7 @@ export class OfferService {
             fullName: true,
             averageRating: true,
             totalTrades: true,
-            trustLevel: true,
+
             kycStatus: true,
             workHoursStart: true,
             workHoursEnd: true,

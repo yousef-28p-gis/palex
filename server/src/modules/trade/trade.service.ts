@@ -588,6 +588,18 @@ export class TradeService {
       data: { reservedBalance: { decrement: trade.amountUsdt } },
     });
 
+    // ✅ إعلام الطرفين
+    this.tradeGateway.sendToUser(trade.sellerId, 'trade:update', {
+      tradeId,
+      status: 'cancelled',
+      message: '❌ تم إلغاء الصفقة',
+    });
+    this.tradeGateway.sendToUser(trade.buyerId, 'trade:update', {
+      tradeId,
+      status: 'cancelled',
+      message: '❌ تم إلغاء الصفقة',
+    });
+
     return { success: true, message: 'تم إلغاء الصفقة' };
   }
 

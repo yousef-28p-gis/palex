@@ -128,6 +128,12 @@ function TradesContent() {
     }
   };
 
+  // ✅ تصفية الصفقات حسب البحث
+  const filteredTrades = trades.filter((trade: any) => {
+    if (!search) return true;
+    return trade.tradeReference?.toLowerCase().includes(search.toLowerCase());
+  });
+
   // 🔄 التحديث التلقائي عبر WebSocket
   const loadTradesRef = useRef(loadTrades);
   loadTradesRef.current = loadTrades;
@@ -142,12 +148,6 @@ function TradesContent() {
     });
     return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-    loadTrades();
-    if (search && !trade.tradeReference?.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
 
   // ✅ حساب الوقت المتبقي للصفقة
   const getTimeRemaining = (expiresAt: string | null) => {

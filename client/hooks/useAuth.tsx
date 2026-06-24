@@ -12,7 +12,6 @@ interface User {
   phone: string;
   role: string;
   kycStatus: string;
-  trustLevel: string;
   totalTrades: number;
   successRate: number;
   averageRating: number;
@@ -29,7 +28,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (data: LoginData, redirectTo?: string) => Promise<void>;
+  login: (data: LoginData, redirectTo?: string) => Promise<{ user: any } | void>;
   register: (data: RegisterData, redirectTo?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
@@ -79,7 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phone: '',
           role: 'user',
           kycStatus: 'none',
-          trustLevel: 'new_trader',
           totalTrades: 0,
           successRate: 0,
           averageRating: 0,
@@ -119,14 +117,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error(userData.suspensionReason || 'حسابك موقوف. لا يمكنك تسجيل الدخول.', {
           duration: 5000,
         });
-        return;
+        return { user: userData };
       }
       
       localStorage.setItem('accessToken', accessToken);
-      document.cookie = `accessToken=${accessToken}; path=/; max-age=900; SameSite=Lax`;
+      document.cookie = `accessToken=${accessToken}; path=/; max-age=604800; SameSite=Lax`;
       setUser(userData);
 
       toast.success('تم تسجيل الدخول بنجاح');
+
+      if (redirectTo === '__skip_redirect__') {
+        return { user: userData };
+      }
 
       const targetPath = redirectTo || '/dashboard';
       router.push(targetPath);
@@ -145,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { accessToken, user: userData } = response.data;
 
       localStorage.setItem('accessToken', accessToken);
-      document.cookie = `accessToken=${accessToken}; path=/; max-age=900; SameSite=Lax`;
+      document.cookie = `accessToken=${accessToken}; path=/; max-age=604800; SameSite=Lax`;
       setUser(userData);
       
       toast.success('تم إنشاء الحساب بنجاح');
